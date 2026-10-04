@@ -10,6 +10,7 @@ from ciw.net import main
 
 @pytest.fixture
 def published(tmp_path, capsys):
+    pytest.importorskip("cryptography.hazmat.primitives.asymmetric.ed25519")
     destination = tmp_path / "specimen"
     assert main(["legibility", "demo", "--output-dir", str(destination)]) == 0
     capsys.readouterr()
