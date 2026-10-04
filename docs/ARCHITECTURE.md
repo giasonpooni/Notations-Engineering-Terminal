@@ -6,6 +6,10 @@ see [Research foundations and attribution](RESEARCH_FOUNDATIONS.md); for the
 mathematical organizing vocabulary, see
 [Research context](RESEARCH_CONTEXT.md).
 
+For the shared-boundary enforcement audit, recurring `net catalog --audit`
+coverage gate, and remaining mathematical obligations, see the
+[cyber-physical contract audit](CYBER_PHYSICAL_AUDIT_2026-10-03.md).
+
 > **Research annotation — architectural adaptation.** The distinction between
 > canonical state and any one graph representation is motivated in part by
 > representation-independent structures in graph/matroid theory, especially the

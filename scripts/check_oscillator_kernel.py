@@ -194,15 +194,21 @@ def execute_gate(args, destination, report):
         (destination/f"{name}-trajectory.json").write_bytes(canonical({"source":source,"output":trace,"oracle":oracle}))
     report["gates"]["existing_analytic_oracle"]={"outcome":"passed","fixtures":fixtures}
     # Existing envelopes and schema dispatch, not a new kernel session manager.
+    from ciw.adapters.protocol import InstrumentManifest
+    from ciw.core.identities import evidence_id
     from ciw.operations.registry import OperationRegistry
     from ciw.operations.runner import execute, validate_execution
     from ciw.operations.schemas import validate_payload
     registry=OperationRegistry(); registry.register(operation(kernel))
-    run={"run_id":"run-"+uuid.uuid4().hex,"evidence_id":identity(trace),
+    manifest = InstrumentManifest("oscillator-kernel-rk4-fixture.v1", role="record_only",
+                                  units={"q": "m", "v": "m/s"}, frames=("oscillator-state",))
+    run={"run_id":"run-"+uuid.uuid4().hex,
          "instrument":"oscillator-kernel-rk4-fixture.v1","time_s":trace["time_s"],
          "metadata":{"duration_s":trace["time_s"][-1]+1/64,"sample_count":len(trace["time_s"]),
-                     "coordinate_frame":"oscillator-state","provenance":{"source":"native-kernel RK4 test trajectory"}},
+                     "coordinate_frame":"oscillator-state","manifest":manifest.to_dict(),
+                     "provenance":{"source":"native-kernel RK4 test trajectory"}},
          "channels":{"q":{"unit":"m","values":trace["q_m"]},"v":{"unit":"m/s","values":trace["v_m_s"]}}}
+    run["evidence_id"] = evidence_id(run)
     selection={"revision":0,"channel":"q","interval_s":[0.0,run["metadata"]["duration_s"]]}
     parameters={"gamma_s_inv":source["model"]["gamma_s_inv"],"omega_0_rad_s":source["model"]["omega_0_rad_s"],
                 "channel":selection["channel"],"interval_s":selection["interval_s"]}

@@ -93,7 +93,7 @@ def register_schemas():
     global _REGISTERED
     if not _REGISTERED:
         from .operations.schemas import register_payload_validator
-        register_payload_validator(OPERATION, validate_payload)
+        register_payload_validator(OPERATION, validate_payload, role="analysis")
         _REGISTERED = True
 
 

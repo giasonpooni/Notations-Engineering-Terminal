@@ -2,7 +2,7 @@ name: Proved heat with real SP1
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     tags: ['**']
     paths-ignore:
       - 'README.md'
@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     env:
-      CIW_PROVIDER_READ_TOKEN: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || github.event_name == 'workflow_dispatch') && secrets.CIW_PROVIDER_READ_TOKEN || '' }}
       CARGO_BUILD_JOBS: '2'
       CARGO_NET_GIT_FETCH_WITH_CLI: 'true'
       CARGO_INCREMENTAL: '0'
@@ -40,12 +39,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Configure read-only private-provider access
-        run: python scripts/ci_provider_access.py configure
       - name: Check Linux resource budget
         run: |
           python - <<'PY'
@@ -68,8 +66,9 @@ jobs:
         run: |
           stack="$RUNNER_TEMP/proved-heat-stack"
           mkdir -p "$stack/notationsystems"
-          git -c core.autocrlf=false clone --no-checkout https://github.com/atomtrapping/Notations-Compute-Runtime.git "$stack/scr"
-          git -C "$stack/scr" -c core.autocrlf=false checkout --detach a59aba283b0304faeeb3e5d305087e7709e171ca
+          python scripts/monorepo.py > results/proved-heat/source-audit.json
+          git --no-replace-objects merge-base --is-ancestor a59aba283b0304faeeb3e5d305087e7709e171ca HEAD
+          git --no-replace-objects -c core.autocrlf=false worktree add --detach "$stack/scr" a59aba283b0304faeeb3e5d305087e7709e171ca
           git -c core.autocrlf=false clone --no-checkout https://github.com/succinctlabs/sp1.git "$stack/notationsystems/SP1-zero-knowledge-virtual-machine"
           git -C "$stack/notationsystems/SP1-zero-knowledge-virtual-machine" -c core.autocrlf=false checkout --detach b38b61209e45e969289e70d5cf79dc763460bc41
       - name: Restore exact pinned host builds and Cargo downloads
@@ -186,6 +185,16 @@ jobs:
             --prover "$stack/proof-target/release/sp1-host" \
             --guest "$stack/artifacts/sp1-heat.elf" \
             --output-dir results/proved-heat/gate
+      - name: Show retained reports for evidence review
+        if: always()
+        run: >-
+          python scripts/show_qualification_reports.py
+          results/proved-heat/resources.json
+          results/proved-heat/source-audit.json
+          results/proved-heat/build.json
+          results/proved-heat/source-checks.json
+          results/proved-heat/gate/gate.json
+          results/proved-heat/gate/reverification.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

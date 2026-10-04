@@ -2,7 +2,7 @@ name: Shared calibrated window replay
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     tags: ['**']
     paths-ignore:
       - 'README.md'
@@ -28,8 +28,6 @@ concurrency:
 
 jobs:
   calibrated-window:
-    env:
-      CIW_PROVIDER_READ_TOKEN: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || github.event_name == 'workflow_dispatch') && secrets.CIW_PROVIDER_READ_TOKEN || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -39,15 +37,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Configure read-only private-provider access
-        run: python scripts/ci_provider_access.py configure
       - run: python -m pip install 'setuptools>=77' wheel
       - name: Exercise isolated installed workbench and pinned native providers
-        run: python scripts/check_calibrated_window.py --output-dir results/calibrated-window
+        run: python scripts/check_public_provider_gate.py calibrated-window --output-dir results/calibrated-window
+      - name: Show retained reports for evidence review
+        if: always()
+        run: >-
+          python scripts/show_qualification_reports.py
+          results/calibrated-window/original.json
+          results/calibrated-window/replay.json
       - uses: actions/upload-artifact@v4
         if: success()
         with:

@@ -1,0 +1,77 @@
+name: Scientific system composition
+on:
+  push:
+    branches: [main, 'release/**']
+    tags: ['**']
+  pull_request:
+    paths:
+      - 'src/ciw/**'
+      - 'tests/test_system*.py'
+      - 'tests/test_capabilities.py'
+      - 'pyproject.toml'
+      - '.github/workflows/system-composition.yml'
+      - 'containers/system-reference/**'
+      - 'scripts/qualify_system_oci.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  reference-and-wheel:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e '.[dev]'
+      - run: python -c "import pathlib,subprocess,sys; paths=sorted(str(p) for p in pathlib.Path('tests').glob('test_system*.py'));subprocess.run([sys.executable,'-m','pytest',*paths,'tests/test_capabilities.py','tests/test_protocol.py','tests/test_correction_session.py','--junitxml=results/system-source.xml'],check=True)"
+      - run: python -m pip wheel --no-deps . --wheel-dir dist
+      - run: python -m pip uninstall -y computational-instrumentation-workbench
+      - name: Qualify installed worker and offline inspection
+        run: |
+          python -c "import pathlib,subprocess,sys; subprocess.run([sys.executable,'-m','pip','install','--no-deps',str(next(pathlib.Path('dist').glob('*.whl')))],check=True)"
+          python -c "import os,pathlib,subprocess,sys,tempfile; d=pathlib.Path(os.environ['RUNNER_TEMP'])/'net-system-installed';d.mkdir(); env=dict(os.environ);env.pop('PYTHONPATH',None);subprocess.run([sys.executable,'-I','-m','ciw','system','demo','--output-dir',str(d/'demo')],cwd=d,env=env,check=True);subprocess.run([sys.executable,'-I','-m','ciw','system','inspect',str(d/'demo'/'workspace.json')],cwd=d,env=env,check=True)"
+      - name: Retain source and installed reference evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: system-reference-${{ matrix.os }}-${{ matrix.python }}
+          path: |
+            results/system-source.xml
+            ${{ runner.temp }}/net-system-installed/
+            dist/*.whl
+          if-no-files-found: error
+  oci-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.14'
+      - run: python -m pip install --upgrade 'setuptools>=77' wheel
+      - run: python -m pip install -e '.[dev]'
+      - name: Qualify actual digest-selected OCI worker
+        run: python scripts/qualify_system_oci.py --output-dir results/system-oci
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: scientific-system-oci-qualification
+          path: results/system-oci
+          if-no-files-found: error

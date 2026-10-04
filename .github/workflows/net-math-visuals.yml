@@ -28,7 +28,7 @@ jobs:
           python - <<'PY'
           import xml.etree.ElementTree as ET
           suites=list(ET.parse('math-visual-contracts.xml').getroot().iter('testsuite'))
-          assert sum(int(s.attrib['tests']) for s in suites)==410
+          assert sum(int(s.attrib['tests']) for s in suites)==428
           assert all(int(s.attrib[k])==0 for s in suites for k in ('failures','errors','skipped'))
           PY
       - run: python -m build --wheel

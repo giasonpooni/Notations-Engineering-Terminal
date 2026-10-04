@@ -446,6 +446,49 @@ def test_admission_gate_refuses_forbidden_information_loss():
     assert gate["policy_violations"] == ["detail.microstate.v1"]
 
 
+@pytest.mark.parametrize("required_only", [False, True])
+def test_admission_gate_unknown_protected_effect_remains_unresolved(required_only):
+    sem, reg = registry()
+    spec = first_spec()
+    protected = "safety.interlock.v1"
+    if required_only:
+        spec["requires"] = [protected]
+    contract = contract_from_spec(reg, sem, spec)
+    verification = verification_from_spec(reg, sem, contract, verification_spec(contract))
+    gate = admission_gate_from_spec(reg, sem, contract, verification, {
+        "gate_id": "preservation.admission-unknown.v1", "forbidden_forgets": [protected], "notes": ""})
+    assert verification["status"] == "VERIFIED"
+    assert gate["decision"] == "UNRESOLVED"
+    assert gate["reasons"] == ["loss_policy_properties_not_established_by_contract"]
+    assert gate["policy_violations"] == []  # Unknown loss is not a demonstrated FORGET.
+    assert gate["claims"]["state_admission_performed"] is False
+    validate_admission_gate(gate, reg, sem, contract, verification)
+    forged = deepcopy(gate)
+    forged.update(decision="ELIGIBLE", reasons=["preservation_contract_verified_under_declared_loss_policy"])
+    seal(forged)
+    with pytest.raises(ValueError, match="contradicts"):
+        validate_admission_gate(forged, reg, sem, contract, verification)
+
+
+def test_known_forbidden_loss_takes_precedence_over_unknown_protected_property():
+    sem, reg, contract, _ = contracts()
+    verification = verification_from_spec(reg, sem, contract, verification_spec(contract))
+    gate = admission_gate_from_spec(reg, sem, contract, verification, {
+        "gate_id": "preservation.admission-loss-unknown.v1",
+        "forbidden_forgets": ["detail.microstate.v1", "safety.interlock.v1"], "notes": ""})
+    assert gate["decision"] == "REFUSED"
+    assert gate["policy_violations"] == ["detail.microstate.v1"]
+
+
+@pytest.mark.parametrize("protected", ["physical.mass.v1", "state.position.v1", "error.pressure.v1"])
+def test_verified_declared_nonforget_effects_satisfy_loss_policy(protected):
+    sem, reg, contract, _ = contracts()
+    verification = verification_from_spec(reg, sem, contract, verification_spec(contract))
+    gate = admission_gate_from_spec(reg, sem, contract, verification, {
+        "gate_id": "preservation.admission-declared.v1", "forbidden_forgets": [protected], "notes": ""})
+    assert gate["decision"] == "ELIGIBLE"
+
+
 def test_admission_gate_propagates_unresolved_verification():
     sem, reg, left, _ = contracts()
     verification = verification_from_spec(

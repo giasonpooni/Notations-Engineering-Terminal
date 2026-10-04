@@ -63,6 +63,9 @@ _OVERHEAD = 4096
 
 
 def _workflow(kind):
+    if kind == "system-specification":
+        from . import system_source
+        return system_source
     if kind == "reference-evidence":
         from . import reference_evidence
         return reference_evidence
@@ -807,6 +810,11 @@ class Workbench:
             if source_id not in self._sources:
                 raise ValueError("Unknown retained workbench source")
             return deepcopy(self._sources[source_id])
+
+    def retained_sources(self):
+        """Capture detached exact source descriptors and bytes under one lock."""
+        with self._lock:
+            return deepcopy(self._sources)
 
     def list_bundles(self):
         with self._lock:

@@ -70,6 +70,8 @@ def _check_exports(directory, bundle, report):
 def _publish(destination, contract, artifacts, *, run=None, private_key=None, demo=False):
     from .legibility_view import render_html
     destination = Path(destination)
+    # Reject invalid metadata/bytes before creating a publication directory.
+    compile_bundle(contract, artifacts=artifacts)
     destination.mkdir(parents=True, exist_ok=False)
     payload = compile_in_session(run, contract, destination / "compilation") if run is not None else None
     bundle = payload["result"]["data"] if payload else compile_bundle(contract)
@@ -114,6 +116,10 @@ def _publish(destination, contract, artifacts, *, run=None, private_key=None, de
 def parser():
     root = argparse.ArgumentParser(prog="ciw legibility", description=__doc__)
     actions = root.add_subparsers(dest="action", required=True)
+    compare = actions.add_parser("compare", help="Compare intact bundle sources; signatures and bytes require verify")
+    compare.add_argument("before", type=Path, help="Earlier bundle.json")
+    compare.add_argument("after", type=Path, help="Later bundle.json")
+    compare.add_argument("--output", type=Path)
     demo = actions.add_parser("demo", help="Build a signed synthetic impact specimen and NET compilation session")
     demo.add_argument("--output-dir", type=Path, required=True)
     compile_ = actions.add_parser("compile", help="Compile a source contract with explicit artifact paths")
@@ -133,14 +139,15 @@ def parser():
     sign.add_argument("bundle", type=Path)
     sign.add_argument("--private-key", type=Path, required=True)
     sign.add_argument("--output", type=Path, required=True)
-    for action in ("inspect", "verify"):
+    for action in ("inspect", "verify", "review"):
         verify = actions.add_parser(action, help="Check retained bytes and explicitly supplied trust/current version")
         verify.add_argument("directory", type=Path)
         verify.add_argument("--trust", type=Path)
         verify.add_argument("--expected-object-id")
         verify.add_argument("--expected-version")
         verify.add_argument("--expected-source-digest")
-        verify.add_argument("--output", type=Path)
+        verify.add_argument("--output", type=Path, required=action == "review",
+                            help="New HTML file for review; JSON report for inspect/verify")
     keygen = actions.add_parser("keygen", help="Generate an operator-owned local key; never overwrite an existing key")
     keygen.add_argument("--private-key", type=Path, required=True)
     keygen.add_argument("--trust", type=Path, required=True)
@@ -150,7 +157,15 @@ def parser():
 def main(argv=None):
     args = parser().parse_args(argv)
     try:
-        if args.action == "demo":
+        if args.action == "compare":
+            from .legibility_compare import compare_bundles
+            result = compare_bundles(read_json(args.before), read_json(args.after))
+            if args.output:
+                with args.output.open("x", encoding="utf-8") as stream:
+                    json.dump(result, stream, indent=2, allow_nan=False)
+            print(json.dumps(result, indent=2, allow_nan=False))
+            return 2 if result["same_version_content_conflict"] else 0
+        elif args.action == "demo":
             from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
             import tempfile
             with tempfile.TemporaryDirectory(prefix="ciw-legibility-fixture-") as temporary:
@@ -201,7 +216,11 @@ def main(argv=None):
             _check_exports(args.directory, bundle, result)
             if args.output:
                 with args.output.open("x", encoding="utf-8") as stream:
-                    json.dump(result, stream, indent=2, allow_nan=False)
+                    if args.action == "review":
+                        from .legibility_view import render_html
+                        stream.write(render_html(bundle, result))
+                    else:
+                        json.dump(result, stream, indent=2, allow_nan=False)
             print(json.dumps(result, indent=2, allow_nan=False))
             failed = (not result["content_intact"] or result["artifact_status"] != "verified" or result["export_status"] != "verified"
                       or result["signature_valid"] is False

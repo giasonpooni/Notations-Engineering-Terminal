@@ -28,6 +28,8 @@ imports `ciw`, and the command-line entry point is also `ciw`.
 | Source correction, dependent-claim staleness and retained history | [Retained correction loop](CORRECTION_LOOP.md) |
 | User-facing instruments and exact commands | [Instrument catalogue](INSTRUMENTS.md) |
 | Synchronized specimen views, signatures and separate trust/qualification checks | [Legibility Instrument](LEGIBILITY.md) |
+| Typed configurations, coupled polymer models and retained numerical checks | [Scientific system composition](SYSTEM_COMPOSITION.md) |
+| Continuous composition work, qualification and next priorities | [Composition development checkpoint](SYSTEM_DEVELOPMENT.md) |
 | Oscillator demo, inspection and reopen commands | [Oscillator operator card](OSCILLATOR_OPERATOR.md) |
 | One worked RMS calculation, retained selection and explicit replay | [Retained RMS lesson](LEARNING.md) |
 | Local dependencies, exact expected identities and unperformed checks | [Read-only profile diagnostics](DOCTOR.md) |
@@ -81,6 +83,7 @@ or inspecting a record does not establish provider availability.
 
 ## Development and availability
 
+- [Qualified research release: candidate, PR scope and evidence gate](QUALIFIED_RELEASE.md)
 - [Engineering superrepo: module map, exact source histories and qualification commands](MONOREPO.md)
 - [Combined integration candidate and acceptance gates](INTEGRATION_CANDIDATE.md)
 - [Development guide](DEVELOPMENT.md)

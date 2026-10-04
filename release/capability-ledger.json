@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "candidate_sha": null,
+  "qualification_status": "not_assessed_on_release_candidate",
+  "note": "Implemented paths in this integration await execution on its exact immutable candidate SHA. CI metadata, scripted synthetic acceptance, independent human usability, and physical validation are separate evidence requirements.",
+  "capabilities": [
+    {
+      "id": "public_core",
+      "source_references": [
+        "docs/OPERATOR_READINESS.md",
+        "docs/RUN_NET.md"
+      ],
+      "implemented": "documented_at_source_commit",
+      "installable": "requires_candidate_wheel_evidence",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "Source regression on Linux and Windows",
+        "Installed wheel identity and outside-checkout smoke",
+        "Bounded first-use numerical checks and retained records"
+      ]
+    },
+    {
+      "id": "oscillator_reference",
+      "source_references": [
+        "docs/OSCILLATOR_OPERATOR.md",
+        "docs/LEARNING.md"
+      ],
+      "implemented": "documented_at_source_commit",
+      "installable": "requires_candidate_wheel_evidence",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "Synthetic run and inspect",
+        "RMS comparison and corrected selection",
+        "Fresh replay distinguished from provider-free reopen"
+      ]
+    },
+    {
+      "id": "thermal_reference",
+      "source_references": [
+        "docs/OPERATOR_READINESS.md"
+      ],
+      "implemented": "documented_at_source_commit",
+      "installable": "requires_candidate_wheel_evidence",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "net start thermal/original and thermal/replay receipts",
+        "Candidate-bound retained result comparison",
+        "Independent operator correction/replay journey"
+      ]
+    },
+    {
+      "id": "impact_legibility",
+      "source_references": [
+        "docs/RUN_NET.md",
+        "docs/LEGIBILITY.md"
+      ],
+      "implemented": "integrated_review_and_comparison",
+      "installable": "requires_legibility_extra_and_installed_operator_report",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "Installed modal-plate run and numerical verify",
+        "Impact import identity and wrong-version refusal",
+        "Retained bytes unchanged during inspection",
+        "Trust demonstration kept separate from authenticated issuer"
+      ]
+    },
+    {
+      "id": "public_composition",
+      "source_references": [
+        "docs/OPERATOR_READINESS.md",
+        "docs/MONOREPO.md"
+      ],
+      "implemented": "documented_at_source_commit",
+      "installable": "independent_packages_not_all_in_root_wheel",
+      "available": "exact_provider_checkouts_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "Exact native history and provider pins",
+        "Independent wheels and public composition jobs",
+        "Offline replay and refusal artifacts"
+      ]
+    },
+    {
+      "id": "shared_scientific_contracts",
+      "source_references": [
+        "docs/PRESERVATION_CONTRACTS.md",
+        "docs/CYBER_PHYSICAL_AUDIT_2026-10-03.md"
+      ],
+      "implemented": "integrated_trusted_roles_closed_results_observation_origin_and_preservation_checks",
+      "installable": "requires_candidate_wheel_evidence",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "Shared contract regressions and scientific catalog audit on candidate",
+        "Malformed/forged saved-result and claimed-observed origin refusals",
+        "Composition runtime publication and saved-state restore consistency"
+      ]
+    },
+    {
+      "id": "typed_scientific_system",
+      "source_references": [
+        "docs/SYSTEM_COMPOSITION.md",
+        "docs/SYSTEM_DEVELOPMENT.md"
+      ],
+      "implemented": "integrated_source_revisions_typed_composition_and_startup_studies",
+      "installable": "requires_candidate_wheel_evidence",
+      "available": "OCI_runtime_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "Linux/Windows source and installed-wheel reference workflows",
+        "Real digest-selected OCI worker run and retained receipt",
+        "Preserved source revisions and explicit replay/inspection behavior"
+      ]
+    },
+    {
+      "id": "three_scripted_operator_journeys",
+      "source_references": [
+        "docs/RELEASE_OPERATOR_ACCEPTANCE.md",
+        "scripts/check_release_operator.py"
+      ],
+      "implemented": "encoder_thermal_and_project_correction_replay_acceptance",
+      "installable": "requires_exact_wheel_bytes_in_fresh_environment",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "All three actual Session lifecycle journeys pass on Linux and Windows",
+        "Original descendants stale; corrected results current; fresh replay identities with equal content",
+        "Offline reopen refuses execution and preserves retained stage hashes",
+        "Exact candidate SHA, wheel digest, command logs, reports and workspaces retained",
+        "Independent human completion remains separately required"
+      ]
+    },
+    {
+      "id": "single_candidate_wheel",
+      "source_references": [
+        "docs/OPERATOR_READINESS.md",
+        "scripts/operator_artifact.py"
+      ],
+      "implemented": "strict_manifest_independent_digest_and_installed_source_resource_inventory",
+      "installable": "requires_same_wheel_on_Linux_and_Windows",
+      "available": "operator_environment_not_checked",
+      "qualified": "not_assessed",
+      "required_evidence": [
+        "One build artifact and separately passed SHA-256 consumed by both platforms",
+        "Installed ciw source/resource closure verified before and after execution",
+        "Bytecode, shadowed/editable imports, path aliases and drift refused",
+        "Both platform journeys and aggregate gate complete on exact candidate",
+        "No source-to-binary attestation or physical authority inferred"
+      ]
+    }
+  ],
+  "baseline_source_commit": "ffad7dba2b258339b27170e071c0de431f6f2aef",
+  "candidate_ref": "release/net-research-candidate"
+}

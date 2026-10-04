@@ -46,7 +46,7 @@ jobs:
               tests=['test_simulation_timeline.py','test_simulation_capture.py','test_godot_simulation.py','test_simulation_control.py','test_simulation_campaign.py']
               subprocess.run([sys.executable,'-I','-m','pytest','-q',*[str(root/'tests'/n) for n in tests],
                   '-o','pythonpath=','-o','addopts=','--junitxml='+str(root/'timeline-installed.xml')],cwd=temp,env=env,check=True)
-          for path,count in [('timeline-source.xml',323),('timeline-installed.xml',223)]:
+          for path,count in [('timeline-source.xml',342),('timeline-installed.xml',223)]:
               suites=list(ET.parse(path).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites)==count
               assert all(int(s.attrib[k])==0 for s in suites for k in ('failures','errors','skipped'))

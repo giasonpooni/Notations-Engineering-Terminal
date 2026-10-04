@@ -269,19 +269,26 @@ def qualify(args, out, report):
         helpers.trajectory_rows(trace), helpers.trajectory_rows(reference_trace), atol=5e-8, rtol=5e-8)
     # Project actual observations into existing NET records. This operation
     # evaluates derivatives at recorded states; it does not replay Godot.
+    from ciw.adapters.protocol import InstrumentManifest
+    from ciw.core.identities import evidence_id
     from ciw.core.records import validate_run_structure
     from ciw.operations.registry import OperationRegistry
     from ciw.operations.runner import execute, validate_execution
     from ciw.operations.schemas import validate_payload
+    manifest = InstrumentManifest("godot-native-oscillator-host.v1", role="record_only",
+                                  units={"q": "m", "v": "m/s", "energy": "J"},
+                                  frames=("oscillator-state",))
     observation = {"run_schema": "run.v1", "run_id": "run-" + uuid.uuid4().hex,
-        "evidence_id": file_digest(output), "instrument": "godot-native-oscillator-host.v1",
+        "instrument": "godot-native-oscillator-host.v1",
         "time_s": trace["time_s"], "metadata": {"duration_s": trace["time_s"][-1] + trace["time_s"][-1] - trace["time_s"][-2],
         "sample_count": len(trace["time_s"]), "coordinate_frame": "oscillator-state",
+        "manifest": manifest.to_dict(),
         "provenance": {"source": "Godot-owned RK4 trajectory using native RHS; simulated",
             "recorded_output_sha256": file_digest(output), "library_sha256": file_digest(library),
             "extension_sha256": file_digest(extension), "duration_policy": "last sample plus last spacing; no extra evolution"}},
         "channels": {"q": {"unit": "m", "values": trace["q_m"]}, "v": {"unit": "m/s", "values": trace["v_m_s"]},
                      "energy": {"unit": "J", "values": trace["energy_j"]}}}
+    observation["evidence_id"] = evidence_id(observation)
     validate_run_structure(observation)
     kernel = OscillatorKernel(library, library_sha256=build["library_sha256"], source_sha256=build["model_source_sha256"])
     registry = OperationRegistry()

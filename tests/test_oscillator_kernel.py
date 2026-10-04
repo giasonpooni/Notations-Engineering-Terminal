@@ -119,12 +119,18 @@ def test_identity_rejection_before_load(kernel):
 
 
 def example_run():
-    return {"run_id":"run-kernel-fixture","evidence_id":"sha256:"+"1"*64,
+    from ciw.adapters.protocol import InstrumentManifest
+    from ciw.core.identities import evidence_id
+    manifest = InstrumentManifest("oscillator-kernel-test-fixture.v1", role="record_only",
+                                  units={"q": "m", "v": "m/s"}, frames=("oscillator-state",))
+    run = {"run_id":"run-kernel-fixture",
             "instrument":"oscillator-kernel-test-fixture.v1",
             "metadata":{"duration_s":1.0,"sample_count":4,"coordinate_frame":"oscillator-state",
-                        "provenance":{"source":"synthetic test fixture"}},"time_s":[0.0,0.25,0.5,0.75],
+                        "provenance":{"source":"synthetic test fixture"}, "manifest":manifest.to_dict()},"time_s":[0.0,0.25,0.5,0.75],
             "channels":{"q":{"unit":"m","values":[1.0,0.5,0.0,-0.5]},
                         "v":{"unit":"m/s","values":[0.0,-1.0,-2.0,-1.0]}}}
+    run["evidence_id"] = evidence_id(run)
+    return run
 
 
 def example_parameters():

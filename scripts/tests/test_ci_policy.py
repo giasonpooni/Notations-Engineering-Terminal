@@ -30,6 +30,17 @@ class PolicyTests(unittest.TestCase):
             with self.subTest(qualification=qualification):
                 self.assertEqual(self.check(workflow(qualification), qualification), [])
 
+    def test_selected_release_workflows_require_isolated_candidate_pushes(self):
+        for name in policy.RELEASE:
+            if name not in (*policy.ALWAYS, *policy.QUALIFICATION):
+                continue
+            value = workflow(name in policy.QUALIFICATION)
+            value["on"]["push"]["branches"] = ["main", "release/**"]
+            with self.subTest(name=name):
+                self.assertEqual(policy.check_workflow(name, value, qualification=name in policy.QUALIFICATION), [])
+                value["on"]["push"]["branches"] = ["main"]
+                self.assertTrue(policy.check_workflow(name, value, qualification=name in policy.QUALIFICATION))
+
     def test_core_cannot_skip_documentation_changes(self):
         self.assertTrue(self.check(workflow(), False))
 
@@ -100,6 +111,43 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("pyproject.toml", push_paths)
         self.assertIn(".github/workflows/cantera-worker.yml", push_paths)
         self.assertEqual(policy.check_workflow(path.name, value, qualification=False), [])
+
+
+    def test_release_workflows_match_the_evidence_policy(self):
+        import json
+        root = Path(__file__).resolve().parents[2]
+        release = json.loads((root / "release/qualification-policy.json").read_text(encoding="utf-8"))
+        required = [item["path"] for item in release["required_workflows"]]
+        declared = [".github/workflows/" + name for name in policy.RELEASE]
+        self.assertEqual(set(declared), set(required))
+        self.assertEqual(len(declared), len(set(declared)))
+        self.assertEqual(len(required), len(set(required)))
+        self.assertEqual(len(required), len(declared))
+        self.assertEqual(policy.RELEASE_AUXILIARY, ("release-evidence.yml",))
+        self.assertTrue(set(policy.RELEASE).isdisjoint(policy.RELEASE_AUXILIARY))
+
+    def test_checked_in_release_and_collector_push_routes(self):
+        root = Path(__file__).resolve().parents[2]
+        for name in (*policy.RELEASE, *policy.RELEASE_AUXILIARY):
+            value = yaml.load((root / ".github/workflows" / name).read_text(encoding="utf-8"),
+                              Loader=yaml.BaseLoader)
+            with self.subTest(name=name):
+                self.assertEqual(policy.check_release_push(name, value), [])
+
+    def test_release_push_rejects_missing_or_broadened_routes(self):
+        for branches in (["main"], ["release/**"], ["main", "**"], ["main", "release/*"],
+                         ["main", "release/**", "feature/unreviewed"], "main"):
+            with self.subTest(branches=branches):
+                self.assertTrue(policy.check_release_push(
+                    "release-evidence.yml", {"on": {"push": {"branches": branches}}}))
+
+    def test_release_push_rejects_malformed_mappings(self):
+        values = [None, [], "workflow", {}, {"on": None}, {"on": []}, {"on": "push"},
+                  {"on": {}}, {"on": {"push": None}}, {"on": {"push": []}},
+                  {"on": {"push": "main"}}]
+        for value in values:
+            with self.subTest(value=value):
+                self.assertTrue(policy.check_release_push("release-evidence.yml", value))
 
     def test_pyyaml_pin_lives_only_in_the_dev_extra(self):
         import tomllib

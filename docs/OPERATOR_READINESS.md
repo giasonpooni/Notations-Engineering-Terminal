@@ -113,3 +113,33 @@ Synthetic workflow completion does not establish physical calibration,
 measurement accuracy, weather prediction, industrial-state admission or
 machinery-control authority. Those claims require their own measured evidence
 and explicit commissioning or admission process.
+
+## One candidate wheel across hosted platforms
+
+The [installed operator workflow](../.github/workflows/operator-readiness.yml)
+builds one portable wheel and uploads it with `operator-wheel.json`. Linux and
+Windows consume that same artifact. Each consumer checks its SHA-256 against
+the build job's separately supplied digest before installation. The installed
+journey checks the complete `ciw/` source/resource byte inventory before and
+after execution and binds its harness checkout to the same candidate revision.
+Changed, missing, additional, editable or source-shadowed package files refuse.
+
+This exact-artifact lane installs with `pip install --no-compile` and launches
+instrument subprocesses with `-I -B`. Pre-existing package bytecode is refused:
+matching source files alone cannot establish which cached code would execute.
+Ordinary NET installations do not need this stricter qualification setup.
+
+The two platform artifacts retain `qualification.json`, command logs, the
+wheel manifest, first-use workspaces and the original/fresh curved-path replay
+records. The `operator-candidate-wheel` artifact holds the actual wheel; artifacts
+have a 14-day retention period. The `operator-acceptance` job fails if the build
+or either platform journey fails, is cancelled, or is skipped. The source
+contract-test receipts retain individually reported optional/platform skips;
+these do not qualify excluded checks.
+
+The manifest identifies the artifact selected by the build workflow; it is not
+a reproducible-build proof or source-to-binary attestation. This lane qualifies
+its declared synthetic operator journey and public-provider reproduction only.
+It does not close independent human acceptance, private-provider/runtime gates,
+physical validation, admission or actuation authority. Historical reports keep
+their original artifact, platform and provider identities.

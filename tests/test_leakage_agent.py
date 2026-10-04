@@ -32,7 +32,7 @@ def native():
 
 @pytest.fixture
 def small_tmp():
-    with tempfile.TemporaryDirectory(prefix="net-leakage-agent-", dir="/dev/shm") as directory:
+    with tempfile.TemporaryDirectory(prefix="net-leakage-agent-") as directory:
         yield Path(directory)
 
 
@@ -310,7 +310,7 @@ def test_cli_rejects_forged_profile_before_native_construction(small_tmp, capsys
 
     monkeypatch.setattr(NativeLeakageBackend, "__init__", forbidden)
     assert main(["serve", "--instrument", "leakage", "--profile", str(profile),
-                 "--provider-checkout", "/explicit/operator/path"]) == 1
+                 "--provider-checkout", str(small_tmp / "explicit-operator-path")]) == 1
     assert "contract fields" in capsys.readouterr().err
 
 

@@ -13,8 +13,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
+      - name: Preserve long paths and exact fixture bytes
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -43,28 +48,33 @@ jobs:
           python - <<'PY'
           import os, pathlib, subprocess, sys, tempfile
           root = pathlib.Path.cwd()
-          provider = pathlib.Path(os.environ['RUNNER_TEMP']) / 'net-scientific-csr'
-          subprocess.run(['git', 'clone', '--no-checkout', 'https://github.com/giasonpooni/Curved-Surface-Runtime.git', str(provider)], check=True)
-          subprocess.run(['git', '-C', str(provider), '-c', 'core.autocrlf=false', 'checkout', '--detach', 'bbc535af29c30997e56fd120320c570830676462'], check=True)
-          wheel = next((root / 'dist').glob('*.whl'))
-          subprocess.run([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', str(wheel)], check=True)
-          env = {k: v for k, v in os.environ.items() if k != 'PYTHONPATH'}
-          env['CIW_CSG_REPO'] = str(provider)
-          env['CIW_SCIENTIFIC_OUT'] = str(root / 'scientific-native-evidence')
-          with tempfile.TemporaryDirectory() as tmp:
-              probe = subprocess.run([sys.executable, '-I', '-c', 'import ciw; print(ciw.__file__)'], cwd=tmp, env=env, capture_output=True, text=True, check=True)
-              assert not pathlib.Path(probe.stdout.strip()).resolve().is_relative_to(root), 'Must use installed wheel'
-              subprocess.run([sys.executable, '-I', '-m', 'pytest', '-q', str(root / 'validation/scientific_native.py'),
-                              '-o', 'pythonpath=' + (root / 'tests').as_posix(), '-o', 'addopts=',
-                              '--junitxml=' + str(root / 'scientific-native.xml')], cwd=tmp, env=env, check=True)
-              subprocess.run([sys.executable, '-I', str(root / 'scripts/run_thermal_observation_demo.py'),
-                              '--source', str(root / 'examples/thermal-observations/source.json'),
-                              '--output-dir', str(root / 'thermal-observation-evidence')],
-                             cwd=tmp, env=env, check=True, timeout=120)
-              subprocess.run([sys.executable, '-I', str(root / 'scripts/run_thermal_check_demo.py'),
-                              '--evidence-dir', str(root / 'thermal-observation-evidence'),
-                              '--output-dir', str(root / 'thermal-check-evidence')],
-                             cwd=tmp, env=env, check=True, timeout=120)
+          from scripts.monorepo import provider_worktrees
+          from scripts.provider_checkouts import validate_checkout
+          pin = 'bbc535af29c30997e56fd120320c570830676462'
+          with provider_worktrees(root, roles=['csg'], overrides={'csg': pin}) as providers:
+              provider = validate_checkout(providers['csg'], pin)
+              try:
+                  wheel = next((root / 'dist').glob('*.whl'))
+                  subprocess.run([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', str(wheel)], check=True)
+                  env = {k: v for k, v in os.environ.items() if k != 'PYTHONPATH'}
+                  env['CIW_CSG_REPO'] = str(provider)
+                  env['CIW_SCIENTIFIC_OUT'] = str(root / 'scientific-native-evidence')
+                  with tempfile.TemporaryDirectory() as tmp:
+                      probe = subprocess.run([sys.executable, '-I', '-c', 'import ciw; print(ciw.__file__)'], cwd=tmp, env=env, capture_output=True, text=True, check=True)
+                      assert not pathlib.Path(probe.stdout.strip()).resolve().is_relative_to(root), 'Must use installed wheel'
+                      subprocess.run([sys.executable, '-I', '-m', 'pytest', '-q', str(root / 'validation/scientific_native.py'),
+                                      '-o', 'pythonpath=' + (root / 'tests').as_posix(), '-o', 'addopts=',
+                                      '--junitxml=' + str(root / 'scientific-native.xml')], cwd=tmp, env=env, check=True)
+                      subprocess.run([sys.executable, '-I', str(root / 'scripts/run_thermal_observation_demo.py'),
+                                      '--source', str(root / 'examples/thermal-observations/source.json'),
+                                      '--output-dir', str(root / 'thermal-observation-evidence')],
+                                     cwd=tmp, env=env, check=True, timeout=120)
+                      subprocess.run([sys.executable, '-I', str(root / 'scripts/run_thermal_check_demo.py'),
+                                      '--evidence-dir', str(root / 'thermal-observation-evidence'),
+                                      '--output-dir', str(root / 'thermal-check-evidence')],
+                                     cwd=tmp, env=env, check=True, timeout=120)
+              finally:
+                  validate_checkout(provider, pin)
           PY
       - name: Refuse incomplete qualification
         shell: bash
@@ -77,7 +87,7 @@ jobs:
           assert report['checks']['prediction-comparison']['status'] == 'FAIL'
           checks = json.loads(pathlib.Path('thermal-check-evidence/demo-check-summary.json').read_text())
           assert {k: v['status'] for k, v in checks['outcomes'].items()} == {'accepted': 'PASS', 'incomplete': 'INDETERMINATE', 'different': 'FAIL'}
-          for path, expected in [('scientific-contracts.xml', 308), ('scientific-native.xml', 11)]:
+          for path, expected in [('scientific-contracts.xml', 326), ('scientific-native.xml', 11)]:
               suites = list(ET.parse(path).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites) == expected, path
               assert all(int(s.attrib[k]) == 0 for s in suites for k in ('failures', 'errors', 'skipped')), path

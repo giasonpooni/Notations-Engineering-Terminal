@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from .legibility_runtime import runtime_identity as legibility_runtime_identity
+from .system_runtime import runtime_identity as system_runtime_identity
 
 
 SCHEMA = "ciw.capability-catalog.v1"
@@ -48,6 +49,19 @@ def _record(**fields):
         raise RuntimeError("capability index entries need an id")
     return record
 
+
+_SYSTEM_CAPABILITIES = tuple(_record(
+    capability_id=name, disposition="implemented", kind="registered_operation",
+    summary=summary, command=["system", command], operation_id=name, role=role,
+    runtime_identity=system_runtime_identity(), module="ciw.system_workflow",
+    notes="Explicit execution only; physical validation and canonical admission remain separate.",
+) for name, role, command, summary in (
+    ("system.compile.v1", "backend", "compile", "Compile typed scientific configurations into state and execution graphs."),
+    ("system.simulate.v1", "backend", "run", "Execute the coupled reference thermal, mechanical and sensor models."),
+    ("system.verify.v1", "verification", "verify", "Retain separately identified numerical verification of a specific occurrence."),
+    ("system.compare.v1", "backend", "demo", "Measure reduction and evolution disagreement between configurations."),
+    ("system.study.v1", "backend", "study", "Measure timestep accuracy at common times including heating startup."),
+))
 
 _CAPABILITIES = (
     _record(
@@ -91,6 +105,7 @@ _CAPABILITIES = (
         runtime_identity=legibility_runtime_identity(),
         notes="Metadata consistency is separate from artifact bytes, signatures, issuer trust and physical validation.",
     ),
+    *_SYSTEM_CAPABILITIES,
     _record(
         capability_id="learning.oscillator-rms",
         disposition="implemented",

@@ -34,7 +34,7 @@ def context():
             assert data['schema'] == VALUE['port']['schema']
             number(data['value'])
         for name in (SEED, DOUBLE):
-            register_payload_validator(name, validator)
+            register_payload_validator(name, validator, role="analysis")
         _registered = True
     registry = CapabilityRegistry()
     manifest = InstrumentManifest(instrument_id='test.workflow', version='1', role='operation_provider',

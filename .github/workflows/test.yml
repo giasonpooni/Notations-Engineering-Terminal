@@ -2,7 +2,7 @@ name: Prototype checks
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     tags: ['**']
   pull_request:
   workflow_dispatch:
@@ -23,6 +23,10 @@ jobs:
         python: ['3.11', '3.12']
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Preserve long paths and exact fixture bytes
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0

@@ -11,7 +11,7 @@ from __future__ import annotations
 from copy import deepcopy
 from fractions import Fraction
 import math
-from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 import re
 
 from .control_contracts import content_ref, detached, keys, number, text
@@ -96,7 +96,8 @@ def _runtime(value):
              "Malformed retained native interpreter digest")
     for field in ("repository_root", "python_executable"):
         text(value[field])
-        _require(Path(value[field]).is_absolute(), "Native operator binding paths must be absolute")
+        _require(PurePosixPath(value[field]).is_absolute() or PureWindowsPath(value[field]).is_absolute(),
+                 "Native operator binding paths must be absolute")
     version = value["python_version"]
     _require(type(version) is str and re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) is not None,
              "Malformed retained Python version")

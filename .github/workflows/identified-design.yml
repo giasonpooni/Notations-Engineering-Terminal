@@ -2,7 +2,7 @@ name: Identified model and budgeted observation replay
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     tags: ['**']
     paths-ignore:
       - 'README.md'
@@ -28,19 +28,16 @@ concurrency:
 
 jobs:
   identified-design:
-    env:
-      CIW_PROVIDER_READ_TOKEN: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || github.event_name == 'workflow_dispatch') && secrets.CIW_PROVIDER_READ_TOKEN || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Configure read-only private-provider access
-        run: python scripts/ci_provider_access.py configure
       - run: python -m pip install "setuptools>=77" wheel
       - name: Verify installed wheel against all eleven provider pins
-        run: python scripts/check_identified_design.py
+        run: python scripts/check_public_provider_gate.py identified-design

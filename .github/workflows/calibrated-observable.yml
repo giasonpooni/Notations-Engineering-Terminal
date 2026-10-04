@@ -2,7 +2,7 @@ name: Calibrated observable process replay
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     tags: ['**']
     paths-ignore:
       - 'README.md'
@@ -28,23 +28,20 @@ concurrency:
 
 jobs:
   process-experiment:
-    env:
-      CIW_PROVIDER_READ_TOKEN: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))) || github.event_name == 'workflow_dispatch') && secrets.CIW_PROVIDER_READ_TOKEN || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        python: ['3.11', '3.12']
+        python: ['3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Configure read-only private-provider access
-        run: python scripts/ci_provider_access.py configure
       - run: python -m pip install -e ".[dev]"
       - name: Verify pinned calibration, alignment, observability and residual path
-        run: python scripts/check_calibrated_observable.py
+        run: python scripts/check_public_provider_gate.py calibrated-observable

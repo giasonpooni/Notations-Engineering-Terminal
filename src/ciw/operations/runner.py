@@ -11,7 +11,9 @@ import uuid
 from datetime import datetime, timezone
 
 from ..adapters.protocol import AdapterRefusal
+from ..core.identities import validate_evidence_identity
 from ..core.records import finite_tree
+from ..instruments import validate_run
 from .registry import OperationRegistry, valid_operation_id
 from .schemas import validate_payload, validate_role, validate_request_dependencies
 
@@ -37,7 +39,10 @@ def check_seal(record: dict) -> None:
 
 
 def execute(registry: OperationRegistry, run: dict, selection: dict, recording_file: str,
-            operation_id: str, parameters: dict, *, retained_results: dict | None = None) -> tuple[dict, dict | None]:
+            operation_id: str, parameters: dict, *, retained_results: dict | None = None,
+            retained_sources: dict | None = None) -> tuple[dict, dict | None]:
+    run = copy.deepcopy(run)
+    selection = copy.deepcopy(selection)
     parameters = copy.deepcopy(parameters)
     finite_tree(parameters, "operation parameters")
     execution = {
@@ -49,9 +54,19 @@ def execute(registry: OperationRegistry, run: dict, selection: dict, recording_f
         "runtime": None, "status": "refused", "result_id": None,
     }
     try:
+        # Direct runner callers share the Session source-integrity boundary.
+        # Check before reading a provider runtime or invoking numerical code.
+        validate_run(run)
+        validate_evidence_identity(run)
         operation = registry.get(operation_id)
         validate_role(operation_id, operation.role)
         validate_request_dependencies(operation_id, parameters, {} if retained_results is None else retained_results)
+        if operation_id in {"system.compile.v1", "system.simulate.v1", "system.verify.v1",
+                            "system.compare.v1", "system.study.v1"}:
+            from ..system_workflow import validate_live_dependencies
+            validate_live_dependencies(operation_id, parameters,
+                                       {} if retained_results is None else retained_results,
+                                       {} if retained_sources is None else retained_sources)
         if operation.role == "analysis":
             parameters.setdefault("channel", selection["channel"])
             parameters.setdefault("interval_s", copy.deepcopy(selection["interval_s"]))
@@ -71,6 +86,11 @@ def execute(registry: OperationRegistry, run: dict, selection: dict, recording_f
         if not isinstance(data, dict):
             raise AdapterRefusal("invalid_adapter_output", "Operation data must be an object")
         validate_payload(operation_id, data, run, parameters, selection)
+        if (operation_id == "system.simulate.v1" and parameters.get("engine", "local") == "local"
+                and data["execution_runtime"]["runtime"] != runtime):
+            raise ValueError("Local deployment receipt differs from retained execution runtime")
+        if operation_id == "system.study.v1" and data["report"]["runtime"] != runtime:
+            raise ValueError("Temporal study runtime differs from retained execution runtime")
         json.dumps(data, allow_nan=False)
     except AdapterRefusal as exc:
         execution["refusal"] = exc.to_dict()

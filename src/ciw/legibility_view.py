@@ -234,6 +234,9 @@ def render_html(bundle: Mapping[str, Any], verification_report: Mapping[str, Any
                "Trust under the caller's declared policy."),
         _check("Version currency", report.get("version_current"), "Version current", "Stale or mismatched version",
                "Comparison with a supplied expected version; no live registry lookup."),
+        _check("Standalone exports", None if report.get("export_status") is None else report.get("export_status") == "verified",
+               "Exports intact", "Export mismatch",
+               "Contract and human, reasoning and vision JSON files checked against the bundle."),
     ])
     artifact_status = report.get("artifact_status")
     artifact_label = (
@@ -254,7 +257,7 @@ def render_html(bundle: Mapping[str, Any], verification_report: Mapping[str, Any
         '<div><h3>Physical validation</h3>' + _pill(_readable(physical), _status_tone(physical))
         + '<p class="small muted">Declared qualification: <strong>' + _text(_readable(declared))
         + '</strong></p></div><div><h3>Artifact verification</h3>'
-        + _pill(artifact_label, "unresolved" if artifact_status in (None, "not_checked") else "neutral")
+        + _pill(artifact_label, "unresolved" if artifact_status in (None, "not_checked") else _status_tone(artifact_status))
         + '<p class="small muted">Artifact hashes listed below are declarations until their bytes are checked.</p>'
         '</div></div><p class="note">A valid signature establishes integrity and association with a key. '
         'Calibration, model qualification, experimental validation, and canonical admission are separate decisions.</p>'

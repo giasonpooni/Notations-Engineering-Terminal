@@ -1,0 +1,104 @@
+name: Installed release operator journeys
+
+on:
+  push:
+    branches: [main, 'release/**']
+    tags: ['**']
+  pull_request:
+    paths:
+      - 'src/ciw/**'
+      - 'scripts/check_release_operator.py'
+      - 'scripts/check_operator_installed.py'
+      - 'tests/test_release_operator.py'
+      - 'examples/corrections/**'
+      - 'pyproject.toml'
+      - '.github/workflows/release-operator.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || (github.event_name == 'push' && github.ref) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  installed-journeys:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Preserve long paths and exact fixture bytes
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Check lifecycle and refusal regressions
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pytest -q tests/test_release_operator.py --junitxml=results/release-operator-tests.xml
+      - name: Build candidate wheel
+        run: python -m pip wheel --no-deps . --wheel-dir dist
+      - name: Qualify three journeys from a fresh installed environment
+        shell: python {0}
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          source = Path.cwd().resolve()
+          wheels = list((source / "dist").glob("*.whl"))
+          if len(wheels) != 1:
+              raise SystemExit("Expected exactly one candidate wheel")
+          wheel = wheels[0].resolve()
+          temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
+          environment = temporary / "net-release-installed"
+          output = temporary / "net-release-operator"
+          if environment.exists() or output.exists():
+              raise SystemExit("Refusing to overwrite installed acceptance evidence")
+          subprocess.run([sys.executable, "-m", "venv", str(environment)], check=True)
+          installed = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+          clean = dict(os.environ)
+          clean.pop("PYTHONPATH", None)
+          subprocess.run([str(installed), "-m", "pip", "install", str(wheel)],
+                         cwd=temporary, env=clean, check=True)
+          identity = {
+              "schema": "ciw.release-operator-candidate.v1",
+              "candidate_sha": os.environ["CANDIDATE_SHA"],
+              "wheel": wheel.name,
+              "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "platform": sys.platform,
+          }
+          (source / "results" / "release-operator-candidate.json").write_text(
+              json.dumps(identity, indent=2) + "\n", encoding="utf-8")
+          subprocess.run([
+              str(installed), "-I", str(source / "scripts" / "check_release_operator.py"),
+              "--output-dir", str(output), "--expected-wheel", str(wheel),
+          ], cwd=temporary, env=clean, check=True)
+      - name: Retain reports, workspaces, logs and exact candidate wheel
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-operator-${{ matrix.os }}
+          path: |
+            results/release-operator-tests.xml
+            results/release-operator-candidate.json
+            ${{ runner.temp }}/net-release-operator/
+            dist/*.whl
+          if-no-files-found: error

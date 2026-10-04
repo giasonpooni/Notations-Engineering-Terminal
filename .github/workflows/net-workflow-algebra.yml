@@ -60,7 +60,7 @@ jobs:
               subprocess.run([sys.executable,'-I','-m','ciw.workflow_cli','demo','--output-dir',str(root/'results/algebra-demo')],cwd=temp,env=env,check=True)
               for name in ('graph-compilation.json','production-compilation.json'):
                   subprocess.run([sys.executable,'-I','-m','ciw.workflow_cli','inspect',str(root/'results/algebra-demo'/name)],cwd=temp,env=env,check=True)
-          for path,count in [('algebra-source.xml',736),('algebra-installed.xml',85)]:
+          for path,count in [('algebra-source.xml',755),('algebra-installed.xml',85)]:
               suites=list(E.parse(path).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites)==count
               assert all(int(s.attrib[k])==0 for s in suites for k in ('failures','errors','skipped'))

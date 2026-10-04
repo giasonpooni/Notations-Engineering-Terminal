@@ -30,6 +30,7 @@
       "import_revision": "13c5fe75c7e829c24bae12fcf8386d4831224d4e",
       "import_tree": "7d833657e7f838ac1b6ad6d0c3fb783151d1e85e",
       "runtime_revision": "40507060ca7a9126a9d641999b994a757eef3bfd",
+      "additional_history_roots": ["edb4e5b99ec0ce384437e1c0f1c820ef04598e33"],
       "distribution": "time-base-reconciliation-runtime",
       "version": "0.1.0",
       "python_import": "tbrt",
@@ -125,6 +126,7 @@
       "import_revision": "928ae6a76d4f853aa8306fef8207f81244b7066f",
       "import_tree": "04d48ef9cf84a73a0cd029187263dca89d7c7e56",
       "runtime_revision": "5e7bda36f521a5c1b0082b512f35e29803bffafc",
+      "additional_history_roots": ["2f838f4e196f453efc3a59045b0b3ec4b5680296"],
       "distribution": "state-estimation-testbed",
       "version": "0.3.0",
       "python_import": "state_estimation_testbed",
@@ -293,7 +295,8 @@
       "ownership": "giasonpooni",
       "build_kind": "python",
       "additional_history_roots": [
-        "e8f0938ab243a1905792ba2c43439cb4f40cd4be"
+        "e8f0938ab243a1905792ba2c43439cb4f40cd4be",
+        "0b00e837c2df3206a3d38b497799f85b72de80f7"
       ],
       "upstream_default_revision": "e8f0938ab243a1905792ba2c43439cb4f40cd4be",
       "selected_import_reason": "last fully green unchanged release snapshot; current upstream documentation migration explicitly unqualified",
@@ -438,7 +441,8 @@
       "ownership": "giasonpooni",
       "build_kind": "python-source",
       "additional_history_roots": [
-        "98ab2f312cb7f9f4dbb18b25f762593eba56653e"
+        "98ab2f312cb7f9f4dbb18b25f762593eba56653e",
+        "91a6d3b37f28623332acd485e9f8a12953acf71e"
       ],
       "upstream_default_revision": "98ab2f312cb7f9f4dbb18b25f762593eba56653e",
       "selected_import_reason": "public provider-host branch preserving all existing NET native source pins; default retained separately",

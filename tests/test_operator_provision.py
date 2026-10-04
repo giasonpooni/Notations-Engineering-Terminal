@@ -297,7 +297,8 @@ def test_binding_envelope_requires_explicit_workflow_and_original_pin(source, tm
         op.load_bindings_file(file)
 
 
-@pytest.mark.parametrize("raw", ['{"schema":1,"schema":2}', '{"a":NaN}', "x" * 65537])
+@pytest.mark.parametrize("raw", ['{"schema":1,"schema":2}', '{"a":NaN}', "x" * 65537],
+                         ids=["duplicate-key", "nonfinite-number", "byte-overflow"])
 def test_binding_file_rejects_duplicates_nonfinite_and_byte_overflow(tmp_path, raw):
     path = tmp_path / "binding.json"
     path.write_text(raw)

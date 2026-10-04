@@ -3,6 +3,7 @@ import errno
 import importlib.util
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 from subprocess import CalledProcessError, SubprocessError, TimeoutExpired
 import subprocess
@@ -166,6 +167,67 @@ def test_default_temp_environment_is_preserved(coordinator, monkeypatch, tmp_pat
     assert module.check(_arguments(tmp_path)) == 0
     assert {name: observed[name] for name in expected} == expected
     assert "temp_root" not in _report(tmp_path)
+
+
+def test_explicit_cargo_supplies_real_child_compiler_context_and_uv_is_forwarded(coordinator, monkeypatch, tmp_path):
+    module, _ = coordinator
+    tool_bin = tmp_path / "trusted-tools"
+    tool_bin.mkdir()
+    suffix = ".exe" if os.name == "nt" else ""
+    for name in ("cargo", "rustc", "rustdoc", "uv"):
+        path = tool_bin / (name + suffix)
+        path.write_text("Owned tool discovery fixture, never executed.\n")
+        path.chmod(0o755)
+    inherited_path = os.environ.get("PATH", "")
+    observed = []
+    probe = """
+import json
+from pathlib import Path
+import shutil
+import sys
+output = Path(sys.argv[1])
+report = json.loads(sys.argv[2])
+report['compiler_paths'] = {name: shutil.which(name) for name in ('cargo', 'rustc', 'rustdoc')}
+output.mkdir(parents=True)
+(output / 'report.json').write_text(json.dumps(report))
+"""
+
+    def run(command, **kwargs):
+        observed.append(command)
+        group = "operations" if command[1].endswith("check_monorepo_operations.py") else "surface"
+        return subprocess.run([sys.executable, "-c", probe,
+                               command[command.index("--output-dir") + 1],
+                               json.dumps(_fresh_report(schema="notations.monorepo-" + group + "-gate.v1"))], **kwargs)
+
+    monkeypatch.setattr(module, "subprocess", SimpleNamespace(run=run, SubprocessError=SubprocessError))
+    cargo, uv = tool_bin / ("cargo" + suffix), tool_bin / ("uv" + suffix)
+    output = tmp_path / "evidence"
+    assert module.main(["check", "--group", "operations", "--group", "surface",
+                        "--cargo", str(cargo), "--uv", str(uv), "--output-dir", str(output)]) == 0
+    aggregate = _report(output)
+    for group in ("operations", "surface"):
+        child = json.loads(Path(aggregate["groups"][group]["report"]).read_text())
+        assert all(value is not None for value in child["compiler_paths"].values())
+        assert {name: Path(value) for name, value in child["compiler_paths"].items()} == {
+            name: tool_bin / (name + suffix) for name in ("cargo", "rustc", "rustdoc")
+        }
+    assert observed[1][observed[1].index("--uv") + 1] == str(uv.resolve())
+    assert os.environ.get("PATH", "") == inherited_path
+
+
+@pytest.mark.parametrize("result,exit_code", [
+    ({"status": "published"}, 0),
+    ({"status": "published", "publication_timeout": True}, 0),
+    ({"status": "unpublished", "publication_timeout": True}, 1),
+    ({"status": "concurrent_state", "publication_timeout": True}, 1),
+    ({"status": "published", "publication_error": {"type": "OSError", "message": "cleanup failed"}}, 1),
+])
+def test_module_apply_cli_retains_actual_publication_outcome_and_lifecycle_failure(coordinator, monkeypatch, tmp_path, capsys, result, exit_code):
+    module, _ = coordinator
+    monkeypatch.setitem(sys.modules, "module_update", SimpleNamespace(
+        apply=lambda root, plan: result, prepare=lambda *args: pytest.fail("Apply must not prepare another candidate")))
+    assert module.main(["module-apply", "--plan", str(tmp_path / "plan.json")]) == exit_code
+    assert json.loads(capsys.readouterr().out) == result
 
 
 @pytest.mark.parametrize("kind", ["missing", "file"])

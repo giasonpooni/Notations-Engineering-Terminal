@@ -46,7 +46,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import xml.etree.ElementTree as ET
-          for name,count in [('capture-source.xml',286),('capture-installed.xml',185)]:
+          for name,count in [('capture-source.xml',304),('capture-installed.xml',185)]:
               suites=list(ET.parse(name).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites)==count
               assert all(int(s.attrib[k])==0 for s in suites for k in ('failures','errors','skipped'))

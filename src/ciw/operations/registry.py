@@ -56,4 +56,7 @@ def default_registry() -> OperationRegistry:
         ))
     from ..legibility_workflow import operation as legibility_operation
     registry.register(legibility_operation())
+    from ..system_workflow import operations as system_operations
+    for operation in system_operations():
+        registry.register(operation)
     return registry

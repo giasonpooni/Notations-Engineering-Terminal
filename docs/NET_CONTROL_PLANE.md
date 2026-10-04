@@ -76,6 +76,15 @@ An observation contains one named scalar/vector quantity with the same binding.
 `execution_id: null` explicitly means no execution occurrence is known for the
 retained source. Source projection requires the caller to supply model/entity,
 clock and observed/estimated/simulated/reference semantics; it never guesses.
+An `observed` projection additionally requires the retained source's
+`metadata.provenance.semantics` to be `observed`, an `instrument`, `record_only`
+or `measurement_adapter` adapter role, and no conflicting structured source/channel
+origin. The fixed
+analytic oscillator always refuses an observed projection. Unknown origins,
+computed estimates and configuration declarations cannot become acquired data
+through a projection argument. Existing reference, simulated and estimated
+projections remain available. This checks retained declarations, not sensor
+authenticity, calibration or physical validity.
 
 Missing values remain `null`, not zero. Empty vectors, booleans masquerading as
 numbers, nonfinite/out-of-budget values and absent units/frames are rejected.

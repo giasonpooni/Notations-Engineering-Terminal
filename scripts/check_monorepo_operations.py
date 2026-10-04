@@ -344,7 +344,7 @@ print(json.dumps({'modules':{name:str(Path(module.__file__).resolve()) for name,
                 json.dumps({module:{key:wheel[key] for key in ("distribution","version")}})],cwd=temporary,log=log))
             report["compute_releases"][name] = {"wheel":{key:value for key,value in wheel.items() if key != "path"},
                                                   "installed_package":probe,"original_deriver_passed":True}
-        cargo = str(args.cargo.expanduser().resolve()) if args.cargo else shutil.which("cargo")
+        cargo = str(args.cargo.expanduser().absolute()) if args.cargo else shutil.which("cargo")
         if cargo is None:
             raise RuntimeError("The bounded original SCR CPU gate requires Cargo/Rust; native tests cannot be skipped")
         report["cargo_version"] = _run_bound([cargo,"--version"],cwd=temporary,log=log).strip()

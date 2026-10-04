@@ -19,8 +19,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
+      - name: Preserve long paths and exact fixture bytes
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
@@ -31,25 +36,22 @@ jobs:
         run: |
           python -m pytest tests/test_csr_microtools.py -q --junitxml=microtools-contracts.xml
           python -m pytest tests/test_control_plane.py tests/test_scientific.py tests/test_scientific_observations.py tests/test_check_suite.py tests/test_math_inspector.py tests/test_information_display.py -q --junitxml=microtools-regressions.xml
-      - name: Preserve exact provider bytes on Windows too
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          repository: giasonpooni/Curved-Surface-Runtime
-          ref: 0b00e837c2df3206a3d38b497799f85b72de80f7
-          path: providers/csr
-          persist-credentials: false
       - run: python -m build --wheel
       - name: Installed NET wheel outside checkout, then real CSR execution and reproduction
         shell: bash
         run: |
           python - <<'PY'
           import os, pathlib, shutil, subprocess, sys, tempfile
+          from scripts.monorepo import provider_worktrees
+          from scripts.provider_checkouts import validate_checkout
           root = pathlib.Path.cwd()
           wheel = next((root / 'dist').glob('*.whl'))
           subprocess.run([sys.executable, '-m', 'pip', 'install', '--force-reinstall', '--no-deps', str(wheel)], check=True)
           env = {k:v for k,v in os.environ.items() if k != 'PYTHONPATH'}
-          with tempfile.TemporaryDirectory() as tmp:
+          pin = '0b00e837c2df3206a3d38b497799f85b72de80f7'
+          with provider_worktrees(root, roles=['csg'], overrides={'csg': pin}) as providers, tempfile.TemporaryDirectory() as tmp:
+              provider = providers['csg']
+              validate_checkout(provider, pin)
               target = pathlib.Path(tmp)
               shutil.copyfile(root / 'tests/test_csr_microtools.py', target / 'test_csr_microtools.py')
               (target / 'pytest.ini').write_text('[pytest]\n')
@@ -57,14 +59,15 @@ jobs:
               assert not pathlib.Path(probe.stdout.strip()).resolve().is_relative_to(root)
               subprocess.run([sys.executable, '-I', '-m', 'pytest', '-c', 'pytest.ini', 'test_csr_microtools.py', '-q', '--junitxml=' + str(root / 'microtools-installed.xml')], cwd=target, env=env, check=True)
               subprocess.run([sys.executable, '-I', '-m', 'ciw.net', 'tools', 'catalog'], cwd=target, env=env, check=True)
-              subprocess.run([sys.executable, '-I', str(root / 'scripts/check_csr_microtools_native.py'), '--csr-root', str(root / 'providers/csr'), '--csr-revision', '0b00e837c2df3206a3d38b497799f85b72de80f7', '--output-dir', str(root / 'native-evidence')], cwd=target, env=env, check=True)
+              subprocess.run([sys.executable, '-I', str(root / 'scripts/check_csr_microtools_native.py'), '--csr-root', str(provider), '--csr-revision', '0b00e837c2df3206a3d38b497799f85b72de80f7', '--output-dir', str(root / 'native-evidence')], cwd=target, env=env, check=True)
+              validate_checkout(provider, pin)
           PY
       - name: Require complete evidence, not skips
         shell: bash
         run: |
           python - <<'PY'
           import json, xml.etree.ElementTree as E
-          for file, count in [('microtools-contracts.xml',41), ('microtools-installed.xml',41), ('microtools-regressions.xml',338)]:
+          for file, count in [('microtools-contracts.xml',41), ('microtools-installed.xml',41), ('microtools-regressions.xml',357)]:
               suites = list(E.parse(file).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites) == count
               assert all(int(s.attrib[k]) == 0 for s in suites for k in ['errors','failures','skipped'])

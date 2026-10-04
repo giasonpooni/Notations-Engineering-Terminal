@@ -71,11 +71,13 @@ _CONTRACTS = {
 }
 _BUILD_KINDS = {"scr": "python-source", "gsv": "npm", "framemapper": "npm"}
 _ADDITIONAL_HISTORY_ROOTS = {
+    "tbrt": ["edb4e5b99ec0ce384437e1c0f1c820ef04598e33"],
+    "set": ["2f838f4e196f453efc3a59045b0b3ec4b5680296"],
     "fsrt": ["e13e46facc125682776f165ce1b0460b4ff9410a"],
     "framemapper": ["bdfcb041836e86ab1ce93688b127f8960e8d08cf"],
     "rci": ["f863bdd69d49224e0cdc871943bbb052e5b0a975"],
-    "csg": ["e8f0938ab243a1905792ba2c43439cb4f40cd4be"],
-    "scr": ["98ab2f312cb7f9f4dbb18b25f762593eba56653e"],
+    "csg": ["e8f0938ab243a1905792ba2c43439cb4f40cd4be", "0b00e837c2df3206a3d38b497799f85b72de80f7"],
+    "scr": ["98ab2f312cb7f9f4dbb18b25f762593eba56653e", "91a6d3b37f28623332acd485e9f8a12953acf71e"],
     "gsv": ["06c47bd851d8ea8b363a6bbe60a96c7448cbe12e"],
 }
 _JSON_PINS = {role: ("calibrated-observable-runtimes.json", role)

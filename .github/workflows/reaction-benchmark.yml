@@ -13,7 +13,14 @@ jobs:
     env:
       JULIA_NUM_THREADS: '1'
     steps:
+      - name: Preserve exact source bytes and Windows long paths
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Initialize runner-local paths and qualification audit
         shell: pwsh
         run: |
@@ -37,19 +44,30 @@ jobs:
           if (!$revision -or $revision -ne $pin.reaction_families.cantera.scr_revisions[-1]) { throw 'Reaction families require one reviewed host revision' }
           "revision=$revision" >> $env:GITHUB_OUTPUT
           Copy-Item src/ciw/native-interop-runtimes.json "$env:RUNNER_TEMP/reaction-audit/qualification-pins.json"
-      - name: Require access to the pinned SCR repository
-        shell: pwsh
+      - name: Check out the exact retained SCR source
+        id: retained-provider
+        shell: python
         env:
-          SCR_READ_TOKEN: ${{ secrets.SCR_READ_TOKEN }}
+          RETAINED_PROVIDER_REVISION: ${{ steps.pin.outputs.revision }}
         run: |
-          if (!$env:SCR_READ_TOKEN) { throw 'SCR_READ_TOKEN is required for the private pinned SCR checkout; this gate cannot qualify without it' }
-      - uses: actions/checkout@v4
-        with:
-          repository: atomtrapping/Notations-Compute-Runtime
-          ref: ${{ steps.pin.outputs.revision }}
-          path: .ciw-reaction-scr
-          token: ${{ secrets.SCR_READ_TOKEN }}
-          persist-credentials: false
+          import os, re, sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          sys.path.insert(0, str(root))
+          from scripts.monorepo import _retained, git, load_manifest, verify_imports, worktree_mutation_lock
+          from scripts.provider_checkouts import validate_checkout
+          pin = os.environ['RETAINED_PROVIDER_REVISION']
+          if re.fullmatch(r'[0-9a-f]{40}', pin) is None:
+              raise ValueError('A full reviewed provider revision is required')
+          target = root / '.ciw-reaction-scr'
+          verify_imports(root)
+          module = next(item for item in load_manifest(root)['modules'] if item['role'] == 'scr')
+          _retained(root, pin, module)
+          with worktree_mutation_lock(root):
+              git(root, 'worktree', 'add', '--detach', str(target), pin)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              print('prepared=true', file=output)
+          validate_checkout(target, pin)
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.10.12'
@@ -124,6 +142,24 @@ jobs:
           if (($tests.testsuites.testsuite | Measure-Object -Property skipped -Sum).Sum -ne 0) { throw 'Required reaction tests must not skip' }
           & "$env:RUNNER_TEMP/ciw-env/Scripts/python.exe" -I "$root/scripts/check_reaction_benchmark.py" run --catalyst "$env:RUNNER_TEMP/catalyst-binding.json" --cantera "$env:RUNNER_TEMP/cantera-binding.json" --fixtures "$root/examples/reaction-benchmark/fixtures.json" --output "$env:RUNNER_TEMP/reaction-evidence"
           if ($LASTEXITCODE -ne 0) { throw 'Qualified runtime or reaction gate failed; do not broaden pins automatically' }
+      - name: Verify retained SCR source and remove its temporary worktree
+        if: always() && steps.retained-provider.outputs.prepared == 'true'
+        shell: python
+        env:
+          RETAINED_PROVIDER_REVISION: ${{ steps.pin.outputs.revision }}
+        run: |
+          import os, sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          sys.path.insert(0, str(root))
+          from scripts.monorepo import git, worktree_mutation_lock
+          from scripts.provider_checkouts import validate_checkout
+          target = root / '.ciw-reaction-scr'
+          try:
+              validate_checkout(target, os.environ['RETAINED_PROVIDER_REVISION'])
+          finally:
+              with worktree_mutation_lock(root):
+                  git(root, 'worktree', 'remove', '--force', str(target))
       - name: Retain job outcome separately from numerical evidence
         if: always()
         shell: pwsh

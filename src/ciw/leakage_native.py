@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import sys
 
 from .adapters.subprocess import AdapterRefusal, PinnedSubprocessAdapter, _json
@@ -68,7 +68,8 @@ def check_runtime(runtime: dict) -> None:
     if type(runtime["python_sha256"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", runtime["python_sha256"]):
         raise ValueError("Invalid retained native executable digest")
     for field in ("repository_root", "python_executable"):
-        if type(runtime[field]) is not str or not Path(runtime[field]).is_absolute():
+        if type(runtime[field]) is not str or not (
+                PurePosixPath(runtime[field]).is_absolute() or PureWindowsPath(runtime[field]).is_absolute()):
             raise ValueError("Native operator binding paths must be absolute")
 
 

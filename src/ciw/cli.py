@@ -212,6 +212,7 @@ def parser() -> argparse.ArgumentParser:
     dependencies = commands.add_parser("dependencies", help="Inspect retained dependency and correction status without provider execution")
     dependencies.add_argument("path", type=Path, help="Saved workspace JSON")
     commands.add_parser("legibility", help="Compile and verify synchronized specimen representations")
+    commands.add_parser("system", help="Compile, run, observe and verify scientific system configurations")
     from .doctor import PROFILES
     doctor = commands.add_parser("doctor", help="Inspect explicit local provider identities without running or installing them")
     doctor.add_argument("--profile", choices=PROFILES, default="core")
@@ -508,6 +509,9 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     command_line = list(sys.argv[1:] if argv is None else argv)
+    if command_line and command_line[0] == "system":
+        from .system_cli import main as system_main
+        return system_main(command_line[1:])
     if command_line and command_line[0] == "legibility":
         from .legibility_cli import main as legibility_main
         return legibility_main(command_line[1:])

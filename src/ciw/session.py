@@ -228,6 +228,18 @@ def _validate_saved_result(result: Any, run: dict, revision: int, recording_file
                 "verification_id", "verification_status", "recording_file"}
     if not isinstance(result, dict) or not required <= result.keys():
         raise ValueError("Saved result is missing identity, source binding, or data")
+    # Legacy analysis has a closed, schema-less shape. An unknown version (or
+    # a modern envelope with its discriminator removed) must not fall back to
+    # that reader and bypass role, runtime, seal and occurrence validation.
+    if "schema" in result:
+        if result["schema"] != "ciw.operation-result.v1":
+            raise ValueError("Unsupported saved operation result schema")
+        if set(result) != required | {"schema", "role", "runtime", "parameters", "record_digest"}:
+            raise ValueError("Unexpected or missing saved operation result fields")
+    elif set(result) != required or result["operation_id"] not in {
+        "statistics.v1", "spectrum.periodogram.v1"
+    }:
+        raise ValueError("Unsupported legacy analysis result format")
     _identity(result["result_id"], "result-")
     _identity(result["execution_id"], "execution-")
     if result["run_id"] != run["run_id"] or result["evidence_id"] != run["evidence_id"]:
@@ -553,11 +565,13 @@ class Session:
                 dependencies = {identity: copy.deepcopy(self.results[identity])
                                 for identity in dependency_result_ids(operation_id, parameters)
                                 if identity in self.results}
+                retained_sources = (self.workbench.retained_sources()
+                                    if operation_id.startswith("system.") else None)
                 self._pending_operations += 1
             try:
                 execution, result = execute_operation(
                     operations, captured_run, selected, recording_file, operation_id, parameters,
-                    retained_results=dependencies)
+                    retained_results=dependencies, retained_sources=retained_sources)
                 with self._lock:
                     # Legacy analysis can publish while this provider runs;
                     # recheck before writing either half of the operation pair.
@@ -701,6 +715,8 @@ class Session:
         validate_result_dependencies(result_map)
         from .impact_workflow import validate_result_dependencies as validate_impact_dependencies
         validate_impact_dependencies(result_map)
+        from .system_workflow import validate_saved_dependencies as validate_system_dependencies
+        validate_system_dependencies(result_map, retained_workbench.retained_sources())
         from .atmosphere_workflow import validate_result_dependencies as validate_atmosphere_dependencies
         validate_atmosphere_dependencies(result_map)
         from .fluid_workflow import validate_result_dependencies as validate_fluid_dependencies

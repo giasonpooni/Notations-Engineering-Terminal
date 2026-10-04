@@ -255,9 +255,19 @@ The decision is:
 ~~~text
 forbidden declared loss     -> REFUSED
 refuted verification        -> REFUSED
+protected effect undeclared -> UNRESOLVED
 unresolved verification     -> UNRESOLVED
 otherwise                   -> ELIGIBLE
 ~~~
+
+Every property named in `forbidden_forgets` must have an explicit effect in
+the contract. An unmentioned property is unknown even when every declared
+obligation is VERIFIED. Listing it only in `requires` establishes an input
+obligation, not its output preservation. The unknown case retains no fabricated
+loss violation and cannot produce eligibility. A disclosed TRANSFORM or BOUND
+still follows its declared effect and verification; this policy does not
+upgrade either to exact PRESERVE. Gate validation recomputes the same policy,
+so resealing an edited ELIGIBLE decision cannot bypass unresolved coverage.
 
 Even ELIGIBLE retains:
 

@@ -21,18 +21,40 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
+      - name: Preserve exact source bytes and Windows long paths
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]' build
-      - name: Clone pinned CSE
-        shell: bash
+      - name: Check out the exact retained CSE source
+        id: retained-provider
+        shell: python
         run: |
-          git clone --config core.autocrlf=false --no-checkout https://github.com/giasonpooni/Construction-State-Estimator-for-BIM.git cse
-          git -C cse checkout 4b74abda40bba3277de69bf61e9e09283ae2d5b3
+          import os, re, sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          sys.path.insert(0, str(root))
+          from scripts.monorepo import _retained, git, load_manifest, verify_imports, worktree_mutation_lock
+          from scripts.provider_checkouts import validate_checkout
+          pin = '4b74abda40bba3277de69bf61e9e09283ae2d5b3'
+          if re.fullmatch(r'[0-9a-f]{40}', pin) is None:
+              raise ValueError('A full reviewed provider revision is required')
+          target = root / 'cse'
+          verify_imports(root)
+          module = next(item for item in load_manifest(root)['modules'] if item['role'] == 'cse')
+          _retained(root, pin, module)
+          with worktree_mutation_lock(root):
+              git(root, 'worktree', 'add', '--detach', str(target), pin)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              print('prepared=true', file=output)
+          validate_checkout(target, pin)
       - name: Bind pinned CSE path
         shell: python
         run: |
@@ -57,3 +79,19 @@ jobs:
           python scripts/check_ci_policy.py
           git diff --check
       - run: python -m build --wheel
+      - name: Verify retained CSE source and remove its temporary worktree
+        if: always() && steps.retained-provider.outputs.prepared == 'true'
+        shell: python
+        run: |
+          import os, sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          sys.path.insert(0, str(root))
+          from scripts.monorepo import git, worktree_mutation_lock
+          from scripts.provider_checkouts import validate_checkout
+          target = root / 'cse'
+          try:
+              validate_checkout(target, '4b74abda40bba3277de69bf61e9e09283ae2d5b3')
+          finally:
+              with worktree_mutation_lock(root):
+                  git(root, 'worktree', 'remove', '--force', str(target))

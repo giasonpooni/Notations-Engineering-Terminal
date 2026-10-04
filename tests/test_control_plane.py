@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from ciw.adapters.protocol import AdapterRefusal, InstrumentManifest
-from ciw.core.identities import content_identity
+from ciw.core.identities import content_identity, evidence_id
 from ciw.core.covariance import create_covariance_artifact
 from ciw.control_contracts import (
     artifact, bytes_ref, load, observation, record, save_new, specification_id,
@@ -113,6 +113,74 @@ def test_missing_values_are_not_zero_and_uncertainty_is_not_invented():
     assert obs(None)["value"] is None
     assert st()["uncertainty"] is None
     assert obs([1, None])["value"] == [1, None]
+
+
+def projection_source(provenance, *, role="record_only", channel_semantics=None):
+    manifest = InstrumentManifest("test.recorded-observation.v1", role=role,
+                                  units={"position": "m"}, frames=("test-scene/world",))
+    source = {"run_schema": "run.v1", "run_id": "retained-observation-fixture",
+              "instrument": manifest.instrument_id, "time_s": [0.0], "render": {},
+              "channels": {"position": {"unit": "m", "values": [1.0]}},
+              "metadata": {"duration_s": 1.0, "sample_count": 1,
+                           "coordinate_frame": "test-scene/world", "manifest": manifest.to_dict(),
+                           "provenance": provenance}}
+    if channel_semantics is not None:
+        source["channels"]["position"]["semantics"] = channel_semantics
+    source["evidence_id"] = evidence_id(source)
+    return source
+
+
+def project(source, *, channel="position", semantics="observed"):
+    return observations_from_run(source, channel=channel, entity_id="test/body", clock_id="test/clock",
+                                 model_id="test.model.v1", semantics=semantics)
+
+
+@pytest.mark.parametrize("provenance", [
+    {}, {"semantics": "reference"}, {"semantics": "simulated"}, {"semantics": "estimated"},
+    {"semantics": "observed", "kind": "synthetic"},
+    {"semantics": "observed", "source": "computed"},
+    {"semantics": "observed", "observed": False},
+    {"semantics": "observed", "synthetic": True},
+])
+def test_projection_cannot_promote_computed_or_unknown_origin_to_observed(provenance):
+    with pytest.raises(ValueError, match="Observed projection requires"):
+        project(projection_source(provenance))
+
+
+@pytest.mark.parametrize("role,channel_semantics", [
+    ("synthetic_model_configuration", None), ("state_estimator", None),
+    ("record_only", "estimated"), ("record_only", "reference"),
+])
+def test_projection_observed_declaration_cannot_override_computed_role_or_channel(role, channel_semantics):
+    with pytest.raises(ValueError, match="Observed projection requires"):
+        project(projection_source({"semantics": "observed"}, role=role, channel_semantics=channel_semantics))
+
+
+@pytest.mark.parametrize("declared", [False, True])
+def test_analytic_source_cannot_be_projected_as_sensor_acquisition(declared):
+    source = make_demo_run()
+    if declared:
+        source["metadata"]["provenance"]["semantics"] = "observed"
+        source["evidence_id"] = evidence_id(source)
+    with pytest.raises(ValueError, match="Observed projection requires"):
+        project(source, channel="q")
+
+
+@pytest.mark.parametrize("semantics", ["reference", "simulated", "estimated"])
+def test_projection_retains_compatible_nonacquisition_semantics(semantics):
+    source = make_demo_run()
+    result = project(source, channel="q", semantics=semantics)
+    assert result[0]["provenance"] == {
+        "provider": source["instrument"], "sources": [source["evidence_id"]], "semantics": semantics}
+    assert result[0]["value"] == source["channels"]["q"]["values"][0]
+
+
+def test_projection_retains_explicit_observed_source_declaration_without_new_occurrence():
+    source = projection_source({"semantics": "observed"})
+    result = project(source)
+    assert result[0]["provenance"]["semantics"] == "observed"
+    assert result[0]["provenance"]["sources"] == [source["evidence_id"]]
+    assert result[0]["identity"]["execution_id"] is None
 
 
 def test_artifact_hash_and_specification_identity():

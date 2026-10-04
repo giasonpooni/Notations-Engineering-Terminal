@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 from .operator_commands import COMMANDS
 
@@ -57,7 +58,25 @@ def catalog() -> dict:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="net catalog", description=__doc__)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--audit", action="store_true", help="Audit scientific review coverage; does not run qualification")
+    parser.add_argument("--repository", type=Path, help="With --audit, check referenced source/test files in an explicit checkout")
     args = parser.parse_args(argv)
+    if args.repository is not None and not args.audit:
+        parser.error("--repository requires --audit")
+    if args.audit:
+        from .scientific_audit import audit
+        value = audit(repository=args.repository)
+        if args.json:
+            print(json.dumps(value, indent=2, allow_nan=False))
+        else:
+            print("NET scientific coverage audit: " + value["status"])
+            print("Commands: {commands}; workflows: {workflows}; ladder levels: {ladder_levels}".format(**value["counts"]))
+            print("Declaration coverage only; referenced tests were not run and physical validation is not established.")
+            for item in value["issues"]:
+                print(json.dumps(item, sort_keys=True))
+            for item in value["open_obligations"]:
+                print(item["id"] + ": " + item["detail"])
+        return 1 if value["issues"] else 0
     value = catalog()
     if args.json:
         print(json.dumps(value, indent=2, allow_nan=False))

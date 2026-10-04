@@ -76,7 +76,7 @@ class Journey:
 
     def invoke(self, module: str | None, arguments: list[str], *, expected: int | tuple[int, ...] = 0,
                timeout: float = 60, json_output: bool = True):
-        command = [str(self.python), "-I", "-m", module, *arguments] if module else [str(self.python), "-I", *arguments]
+        command = [str(self.python), "-I", "-B", "-m", module, *arguments] if module else [str(self.python), "-I", "-B", *arguments]
         index = len(self.report["commands"]) + 1
         prefix = self.logs / f"{index:03d}"
         row = {"argv": command, "cwd": str(self.output), "expected_exit": expected,
@@ -113,6 +113,19 @@ class Journey:
         value = self.ciw("send", kind, "--url", url, "--payload", json.dumps(payload or {}))
         require(value.get("type") == "response", f"Session refused {kind}: {value}")
         return value["payload"]
+
+    def check_artifact(self, manifest: Path, expected_sha256: str, revision: str, *, final: bool = False) -> None:
+        """Bind this installed journey to the single wheel selected by the build job."""
+        source = source_identity(SOURCE)
+        require(source["revision"] == revision, "Harness checkout differs from the candidate revision")
+        require(source["tracked_changes_present"] is False, "Harness checkout has tracked changes")
+        value = self.invoke(None, [str(SOURCE / "scripts/operator_artifact.py"), "verify",
+            "--wheel-dir", str(manifest.parent), "--manifest", str(manifest),
+            "--revision", revision, "--sha256", expected_sha256,
+            "--installed", "--source-root", str(SOURCE)])
+        require(value["status"] == "passed" and value["installed_package_checked"] is True,
+                "Exact installed artifact check did not pass")
+        self.report["artifact_after" if final else "artifact"] = value
 
     def check_installation(self) -> None:
         probe = """import importlib.metadata as m, json, pathlib, platform, sys, ciw
@@ -233,7 +246,7 @@ raise SystemExit(code)"""
         number = len(self.processes) + 1
         stream = (self.output / f"workbench-{number}.log").open("w", encoding="utf-8")
         self.streams.append(stream)
-        process = subprocess.Popen([str(self.python), "-I", "-u", "-m", "ciw.net", "workbench",
+        process = subprocess.Popen([str(self.python), "-I", "-B", "-u", "-m", "ciw.net", "workbench",
                                     "--output-dir", str(directory), "--port", str(port), "--bind", "127.0.0.1"],
                                    cwd=self.output, env=self.environment, stdin=subprocess.DEVNULL,
                                    stdout=stream, stderr=subprocess.STDOUT)
@@ -354,9 +367,21 @@ def main() -> int:
     parser.add_argument("--python", type=Path, default=Path(sys.executable), help="Python from a regular installed wheel environment")
     parser.add_argument("--output-dir", type=Path, required=True, help="New retained report directory outside the checkout")
     parser.add_argument("--monorepo", type=Path, help="Explicit local retained Git objects for public provider activation; no fetch")
+    parser.add_argument("--wheel-manifest", type=Path, help="Manifest for the one retained candidate wheel")
+    parser.add_argument("--wheel-sha256", help="Expected wheel digest supplied independently of the manifest")
+    parser.add_argument("--candidate-revision", help="Exact checkout revision used to build the candidate")
     args = parser.parse_args()
+    artifact_arguments = (args.wheel_manifest, args.wheel_sha256, args.candidate_revision)
+    if any(value is not None for value in artifact_arguments) and not all(value is not None for value in artifact_arguments):
+        parser.error("wheel-manifest, wheel-sha256 and candidate-revision must be supplied together")
+    if args.wheel_manifest is not None:
+        args.wheel_manifest = args.wheel_manifest.resolve(strict=True)
     journey = Journey(args.python, args.output_dir)
     try:
+        if args.wheel_manifest is not None:
+            journey.check_artifact(args.wheel_manifest, args.wheel_sha256, args.candidate_revision)
+        else:
+            journey.report["artifact"] = {"status": "not_requested", "qualification": "not_performed"}
         journey.check_installation()
         journey.check_cold_start()
         catalog = journey.check_first_use()
@@ -365,6 +390,8 @@ def main() -> int:
             journey.check_public_provider(args.monorepo)
         else:
             journey.report["checks"]["public_provider"] = {"status": "not_requested", "qualification": "not_performed"}
+        if args.wheel_manifest is not None:
+            journey.check_artifact(args.wheel_manifest, args.wheel_sha256, args.candidate_revision, final=True)
         journey.report["status"] = "passed"
     except Exception as exc:
         journey.report["failure"] = {"error_type": type(exc).__name__, "reason": str(exc)}

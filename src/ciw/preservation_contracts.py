@@ -615,6 +615,31 @@ def validate_verification(value: dict, registry: dict, semantic: SemanticRegistr
     return detached(value)
 
 
+def _admission_outcome(contract: dict, verification: dict, forbidden: list[str]) -> tuple[list[str], str, list[str]]:
+    """An omitted protected property is unknown, never evidence of no loss."""
+    forgotten = {
+        effect["property_id"] for effect in contract["effects"] if effect["effect"] == "FORGET"
+    }
+    violations = sorted(set(forbidden) & forgotten)
+    declared = {effect["property_id"] for effect in contract["effects"]}
+    if violations:
+        decision = "REFUSED"
+        reasons = ["contract_forgets_policy_required_properties"]
+    elif verification["status"] == "REFUTED":
+        decision = "REFUSED"
+        reasons = ["preservation_verification_refuted"]
+    elif set(forbidden) - declared:
+        decision = "UNRESOLVED"
+        reasons = ["loss_policy_properties_not_established_by_contract"]
+    elif verification["status"] == "UNRESOLVED":
+        decision = "UNRESOLVED"
+        reasons = ["preservation_verification_unresolved"]
+    else:
+        decision = "ELIGIBLE"
+        reasons = ["preservation_contract_verified_under_declared_loss_policy"]
+    return violations, decision, reasons
+
+
 def admission_gate_from_spec(
     registry: dict, semantic: SemanticRegistry, contract: dict, verification: dict, spec: dict
 ) -> dict:
@@ -622,23 +647,7 @@ def admission_gate_from_spec(
     validate_verification(verification, registry, semantic, contract)
     keys(spec, {"gate_id", "forbidden_forgets", "notes"})
     forbidden = _unique_properties(spec["forbidden_forgets"], "forbidden forgotten property")
-    forgotten = {
-        effect["property_id"] for effect in contract["effects"] if effect["effect"] == "FORGET"
-    }
-    violations = sorted(set(forbidden) & forgotten)
-    reasons = []
-    if violations:
-        decision = "REFUSED"
-        reasons.append("contract_forgets_policy_required_properties")
-    elif verification["status"] == "REFUTED":
-        decision = "REFUSED"
-        reasons.append("preservation_verification_refuted")
-    elif verification["status"] == "UNRESOLVED":
-        decision = "UNRESOLVED"
-        reasons.append("preservation_verification_unresolved")
-    else:
-        decision = "ELIGIBLE"
-        reasons.append("preservation_contract_verified_under_declared_loss_policy")
+    violations, decision, reasons = _admission_outcome(contract, verification, forbidden)
 
     value = record(
         "preservation-admission-gate",
@@ -690,10 +699,7 @@ def validate_admission_gate(
         raise ValueError("Admission gate candidate identity differs from verification")
     forbidden = _unique_properties(value["forbidden_forgets"], "forbidden forgotten property")
     violations = _unique_properties(value["policy_violations"], "policy violation")
-    forgotten = {
-        effect["property_id"] for effect in contract["effects"] if effect["effect"] == "FORGET"
-    }
-    expected_violations = sorted(set(forbidden) & forgotten)
+    expected_violations, expected_decision, expected_reasons = _admission_outcome(contract, verification, forbidden)
     if violations != expected_violations:
         raise ValueError("Admission gate policy violations differ from contract")
     if value["decision"] not in ADMISSION_DECISIONS:
@@ -701,18 +707,6 @@ def validate_admission_gate(
     if type(value["reasons"]) is not list or not value["reasons"]:
         raise ValueError("Admission gate requires at least one reason")
     [text(reason) for reason in value["reasons"]]
-    if expected_violations:
-        expected_decision = "REFUSED"
-        expected_reasons = ["contract_forgets_policy_required_properties"]
-    elif verification["status"] == "REFUTED":
-        expected_decision = "REFUSED"
-        expected_reasons = ["preservation_verification_refuted"]
-    elif verification["status"] == "UNRESOLVED":
-        expected_decision = "UNRESOLVED"
-        expected_reasons = ["preservation_verification_unresolved"]
-    else:
-        expected_decision = "ELIGIBLE"
-        expected_reasons = ["preservation_contract_verified_under_declared_loss_policy"]
     if value["decision"] != expected_decision:
         raise ValueError("Admission gate decision contradicts contract/verification")
     if value["reasons"] != expected_reasons:

@@ -1,0 +1,210 @@
+{
+  "schema": "ciw.system-spec.v1",
+  "system_id": "polymer-component",
+  "version": "v1",
+  "configuration_id": "polymer-fixed-16-cells",
+  "frame": "rod.material-axis.v1",
+  "clock": {
+    "unit": "s",
+    "duration": 600.0,
+    "dt": 5.0
+  },
+  "discretization": {
+    "cells": 16
+  },
+  "nodes": [
+    {
+      "node_id": "mechanical",
+      "model_id": "mechanical.axial-thermoelastic.v1",
+      "parameters": {
+        "youngs_modulus_pa": {
+          "value": 1000000000.0,
+          "unit": "Pa"
+        },
+        "area_m2": {
+          "value": 0.0001,
+          "unit": "m^2"
+        },
+        "expansion_per_k": {
+          "value": 8e-05,
+          "unit": "1/K"
+        },
+        "reference_temperature_k": {
+          "value": 293.15,
+          "unit": "K"
+        },
+        "force_n": {
+          "value": 0.0,
+          "unit": "N"
+        },
+        "boundary": "fixed"
+      }
+    },
+    {
+      "node_id": "sensor",
+      "model_id": "sensor.rod-observer.v1",
+      "parameters": {
+        "position_m": {
+          "value": 0.01,
+          "unit": "m"
+        },
+        "temperature_bias_k": {
+          "value": 0.0,
+          "unit": "K"
+        },
+        "displacement_bias_m": {
+          "value": 0.0,
+          "unit": "m"
+        },
+        "temperature_std_k": {
+          "value": 0.05,
+          "unit": "K"
+        },
+        "displacement_std_m": {
+          "value": 2e-07,
+          "unit": "m"
+        },
+        "seed": 7
+      }
+    },
+    {
+      "node_id": "thermal",
+      "model_id": "thermal.rod-fv.v1",
+      "parameters": {
+        "length_m": {
+          "value": 0.02,
+          "unit": "m"
+        },
+        "k_w_per_m_k": {
+          "value": 0.25,
+          "unit": "W/(m*K)"
+        },
+        "density_kg_per_m3": {
+          "value": 1200.0,
+          "unit": "kg/m^3"
+        },
+        "heat_capacity_j_per_kg_k": {
+          "value": 1500.0,
+          "unit": "J/(kg*K)"
+        },
+        "area_m2": {
+          "value": 0.0001,
+          "unit": "m^2"
+        },
+        "initial_temperature_k": {
+          "value": 293.15,
+          "unit": "K"
+        },
+        "left_temperature_k": {
+          "value": 313.15,
+          "unit": "K"
+        },
+        "right_temperature_k": {
+          "value": 293.15,
+          "unit": "K"
+        }
+      }
+    }
+  ],
+  "couplings": [
+    {
+      "coupling_id": "mechanical-sensor",
+      "source": {
+        "node": "mechanical",
+        "port": "displacement"
+      },
+      "target": {
+        "node": "sensor",
+        "port": "displacement"
+      },
+      "quantity": "displacement",
+      "unit": "m",
+      "frame": "rod.material-axis.v1",
+      "mapping": "nodal-linear.v1",
+      "method": "observe",
+      "timing": {
+        "kind": "same-step",
+        "interval_s": 5.0
+      }
+    },
+    {
+      "coupling_id": "thermal-mechanical",
+      "source": {
+        "node": "thermal",
+        "port": "temperature"
+      },
+      "target": {
+        "node": "mechanical",
+        "port": "temperature"
+      },
+      "quantity": "temperature",
+      "unit": "K",
+      "frame": "rod.material-axis.v1",
+      "mapping": "cell-average-to-strain.v1",
+      "method": "one-way-quasistatic",
+      "timing": {
+        "kind": "same-step",
+        "interval_s": 5.0
+      }
+    },
+    {
+      "coupling_id": "thermal-sensor",
+      "source": {
+        "node": "thermal",
+        "port": "temperature"
+      },
+      "target": {
+        "node": "sensor",
+        "port": "temperature"
+      },
+      "quantity": "temperature",
+      "unit": "K",
+      "frame": "rod.material-axis.v1",
+      "mapping": "cell-center-linear.v1",
+      "method": "observe",
+      "timing": {
+        "kind": "same-step",
+        "interval_s": 5.0
+      }
+    }
+  ],
+  "representations": [
+    {
+      "representation_id": "thermal-reduced",
+      "kind": "cell-average.v1",
+      "source_node": "thermal",
+      "target_cells": 4,
+      "assumptions": [
+        "Equal-volume cell blocks; averaged temperature discards subcell gradients.",
+        "Reduction error is measured for this workload and tolerance."
+      ]
+    }
+  ],
+  "assumptions": [
+    "Homogeneous constant thermal and elastic material coefficients.",
+    "One-dimensional rod; transverse and viscoelastic dynamics are omitted.",
+    "Quasistatic axial mechanics with fixed left end and configured right constraint.",
+    "Synthetic observations; physical validation has not been assessed."
+  ],
+  "execution": {
+    "engine": "python.reference.v1",
+    "effect": "simulation",
+    "retry": "idempotent",
+    "resources": {
+      "cpu": 1,
+      "memory_mb": 256
+    }
+  },
+  "validity": {
+    "temperature_min_K": 273.15,
+    "temperature_max_K": 333.15,
+    "strain_abs_limit": 0.01
+  },
+  "tolerances": {
+    "energy_balance_J": 1e-08,
+    "equilibrium_N": 1e-08,
+    "analytic_temperature_K": 2.0,
+    "reduction_temperature_K": 0.75,
+    "reduction_displacement_m": 1e-06
+  }
+}

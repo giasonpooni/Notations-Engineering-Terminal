@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "repository": "atomtrapping/Notations-Systems-Terminal",
+  "candidate_sha": "ffad7dba2b258339b27170e071c0de431f6f2aef",
+  "observed_at": "2026-10-03 21:47:52 UTC",
+  "observation_method": "Read-only GitHub API via connector; not execution of check_release_evidence.py",
+  "status": "blocked",
+  "scope": "Eight selected public baseline workflows",
+  "workflows": [
+    {
+      "path": ".github/workflows/monorepo.yml",
+      "id": 37148823358,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823358",
+      "updated_at": "2026-10-03T19:41:54Z"
+    },
+    {
+      "path": ".github/workflows/test.yml",
+      "id": 37148823476,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823476",
+      "updated_at": "2026-10-03T19:41:53Z"
+    },
+    {
+      "path": ".github/workflows/workflow-contracts.yml",
+      "id": 37148823445,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823445",
+      "updated_at": "2026-10-03T19:41:53Z"
+    },
+    {
+      "path": ".github/workflows/declared-workloads.yml",
+      "id": 37148823556,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823556",
+      "updated_at": "2026-10-03T19:41:53Z"
+    },
+    {
+      "path": ".github/workflows/calibrated-observable.yml",
+      "id": 37148823373,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823373",
+      "updated_at": "2026-10-03T19:41:53Z"
+    },
+    {
+      "path": ".github/workflows/identified-design.yml",
+      "id": 37148823489,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823489",
+      "updated_at": "2026-10-03T19:41:53Z"
+    },
+    {
+      "path": ".github/workflows/calibrated-window.yml",
+      "id": 37148823532,
+      "attempt": 1,
+      "status": "queued",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823532",
+      "updated_at": "2026-10-03T19:41:53Z"
+    },
+    {
+      "path": ".github/workflows/proved-heat.yml",
+      "id": 37148823486,
+      "attempt": 1,
+      "status": "pending",
+      "conclusion": null,
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/actions/runs/37148823486",
+      "updated_at": "2026-10-03T19:41:53Z"
+    }
+  ]
+}

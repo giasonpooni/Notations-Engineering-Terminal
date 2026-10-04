@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "repository": "atomtrapping/Notations-Systems-Terminal",
+  "observed_date": "2026-10-03",
+  "observed_main_sha": "ffad7dba2b258339b27170e071c0de431f6f2aef",
+  "candidate_sha": null,
+  "status": "integrated_candidate_awaiting_qualification",
+  "decision_status": "implemented_in_candidate",
+  "pr_state_changes_performed": false,
+  "scope": "21-import public research baseline; no 23-instrument or physical-validity claim",
+  "prerequisite_prs": [
+    135,
+    137,
+    144,
+    124,
+    128
+  ],
+  "blockers": [
+    {
+      "id": "integrated_candidate",
+      "state": "implemented_awaiting_qualification",
+      "closure": "Integration records and original parent histories are retained; execution must qualify the exact final candidate."
+    },
+    {
+      "id": "public_ci",
+      "state": "open",
+      "closure": "Finish all 46 required jobs across 12 selected workflows on the exact candidate and retain the 35 declared artifacts; inspect their contents separately."
+    },
+    {
+      "id": "capability_evidence",
+      "state": "open",
+      "closure": "Review source, installed-package, numerical/replay and platform evidence per selected capability; metadata gate alone cannot close this."
+    },
+    {
+      "id": "first_operator",
+      "state": "open",
+      "closure": "Three documented operator journeys completed by a new operator; retain failures and correction/replay evidence."
+    },
+    {
+      "id": "private_providers",
+      "state": "outside_public_scope",
+      "closure": "Separately authorized exact provider access and genuine qualification for any later private-provider claim."
+    },
+    {
+      "id": "native_history_publication",
+      "state": "external_blocker",
+      "closure": "Use a publication credential authorized for workflow-containing history, verify native publication separately; do not merge transport PR #139."
+    }
+  ],
+  "pull_requests": [
+    {
+      "number": 148,
+      "title": "Add qualified DSP conditioning and replayable pump diagnostics",
+      "head_sha": "5accef9dc4ae94034ebeed31e241a52945292f23",
+      "disposition": "defer",
+      "rationale": "Additional signal-processing and pump profiles need a separate integrated qualification.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/148"
+    },
+    {
+      "number": 146,
+      "title": "Add algebraic graphics workbench with retained mesh and texture replay",
+      "head_sha": "ed5c7d4360b8aefa9873b28424cbdc6a19bca49c",
+      "disposition": "defer",
+      "rationale": "New graphics, browser and export surfaces expand the first release.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/146"
+    },
+    {
+      "number": 145,
+      "title": "Add five bounded heat-transfer and thermofluids tools",
+      "head_sha": "256cda305557ef127f78b89c1421ccf8c12b6d5f",
+      "disposition": "defer",
+      "rationale": "New numerical profiles and installed journeys belong in a later qualified batch.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/145"
+    },
+    {
+      "number": 144,
+      "title": "Enforce shared scientific contracts and audit NET mathematical coverage",
+      "head_sha": "034b5f320242fb184fa60c224a9baf7d080f4a51",
+      "disposition": "prerequisite",
+      "rationale": "Reconcile and verify relevant evidence-contract fixes before qualification; audit claims alone are insufficient.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/144"
+    },
+    {
+      "number": 143,
+      "title": "Add qualified fluid multiscale dynamics, conservative coupling, and held-out experiment comparison",
+      "head_sha": "6915d10ce62e5a8da8385d3dac24c9986cb35389",
+      "disposition": "defer",
+      "rationale": "New coupled models and held-out comparisons add scientific obligations.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/143"
+    },
+    {
+      "number": 142,
+      "title": "Add 16 course-aligned geomatics and Earth observation tools",
+      "head_sha": "ff146529146d8a0f31ac80f41ce592c6b9eed1d4",
+      "disposition": "defer",
+      "rationale": "Useful new scope, not a baseline prerequisite.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/142"
+    },
+    {
+      "number": 141,
+      "title": "Add bounded weather, hydrometeorology and cryosphere tools to NET",
+      "head_sha": "25e9a245a1a341f8c592f3257b787adcdf333bb2",
+      "disposition": "defer",
+      "rationale": "Additional profiles require their own integrated qualification.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/141"
+    },
+    {
+      "number": 139,
+      "title": "Restore the complete 23-instrument NET workspace — native history transport",
+      "head_sha": "36ee8cbe31e6d0fb90f823dfc81088aafe83fb7d",
+      "disposition": "exclude_transport",
+      "rationale": "Transport PR explicitly says not to merge; native publication and retirement remain separate. Baseline contains 21 imports.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/139"
+    },
+    {
+      "number": 137,
+      "title": "Restore public composition qualification and Windows regression gates",
+      "head_sha": "a9d7c9b1c0ac97175b260d327bc42a6ef4a5c67b",
+      "disposition": "prerequisite",
+      "rationale": "Public provisioning and Windows fixes. Preserve required native ancestry with a merge commit; active repairs are separate.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/137"
+    },
+    {
+      "number": 135,
+      "title": "Make monorepo module updates and toolchain preflight usable",
+      "head_sha": "231a058f3bef00fd9b11db348979b889d5c81e90",
+      "disposition": "prerequisite",
+      "rationale": "History-preserving module maintenance, preflight and Windows guards require current integrated evidence.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/135"
+    },
+    {
+      "number": 128,
+      "title": "Finish legibility operator workflow and verified impact imports",
+      "head_sha": "1dac5a4822e9116fd5bbfa67d83d5b7d35401068",
+      "disposition": "prerequisite",
+      "rationale": "Operator review/comparison increment included in the completion pass; verify installed impact import and identity boundaries.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/128"
+    },
+    {
+      "number": 124,
+      "title": "Add typed scientific composition, source revisions, and startup studies",
+      "head_sha": "6cbb4691a177f31fd18ffff4541b4cc0131f4904",
+      "disposition": "prerequisite",
+      "rationale": "Typed composition foundation included in the completion pass; retain public OCI and installed evidence on the integrated candidate.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/124"
+    },
+    {
+      "number": 114,
+      "title": "feat: verified impact and atmospheric engine with measurement preparation",
+      "head_sha": "2b4cc74a447660941ef072c55e57c1a8dceba5c2",
+      "disposition": "defer",
+      "rationale": "Measurement ingress is an additional increment, not delivered by existing atmosphere/impact code.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/114"
+    },
+    {
+      "number": 100,
+      "title": "feat: spatial and mesh realization adapters V1",
+      "head_sha": "2fd8d418d7c9604dc7eb731d1798a4826228f84c",
+      "disposition": "defer",
+      "rationale": "Restack and reconcile against current realization code before qualification.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/100"
+    },
+    {
+      "number": 99,
+      "title": "feat: typed representation realization adapters V1",
+      "head_sha": "74b2fcf3fc7c317ae5a1782ef5eef58bdbc9f451",
+      "disposition": "superseded_candidate",
+      "rationale": "Main has a different implementation; compare semantics and preserve missing requirements before any closure.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/99"
+    },
+    {
+      "number": 98,
+      "title": "feat: evidence-bound representation expansion V1",
+      "head_sha": "09b4007eae59d4bb0f9183e9fb3794070165c1da",
+      "disposition": "superseded_candidate",
+      "rationale": "Main has different expansion code and a workflow; semantic reconciliation is still required.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/98"
+    },
+    {
+      "number": 78,
+      "title": "feat: unattended local coding/vision agent with bounded workcell edits and usage accounting",
+      "head_sha": "48e62565dd25046a14920874556fa585964495a8",
+      "disposition": "defer",
+      "rationale": "Unattended invocation adds separate operational qualification.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/78"
+    },
+    {
+      "number": 66,
+      "title": "docs: invert institutional framing around Notation Systems commons and Cartesian commercialization",
+      "head_sha": "3100894149779823727b48e0b46e72633f2427a5",
+      "disposition": "superseded_candidate",
+      "rationale": "Current README uses later framing; reconcile editorial intent separately.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/66"
+    },
+    {
+      "number": 64,
+      "title": "feat: qualified GSC raster inspection and NDVI through the NET workbench",
+      "head_sha": "e584e364e3494202e07a865ee4772846ea6bb828",
+      "disposition": "defer",
+      "rationale": "Additional pinned native raster pipeline on an old stack.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/64"
+    },
+    {
+      "number": 63,
+      "title": "feat: agent-driven simulation campaigns with bounded branching and replay",
+      "head_sha": "ba48ba82098ef0274bea471775fd9dcd7f9b743b",
+      "disposition": "defer",
+      "rationale": "Stateful agent execution and cleanup need their own current-head qualification.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/63"
+    },
+    {
+      "number": 53,
+      "title": "docs: make README easier to read and get started with",
+      "head_sha": "ded994c711d7c9a8a9e4c99eb758c323365157fb",
+      "disposition": "superseded_candidate",
+      "rationale": "Current README has been rewritten; preserve useful remaining editorial details selectively.",
+      "url": "https://github.com/atomtrapping/Notations-Systems-Terminal/pull/53"
+    }
+  ],
+  "integrated_inputs": [
+    {
+      "pr": 135,
+      "head_sha": "231a058f3bef00fd9b11db348979b889d5c81e90"
+    },
+    {
+      "pr": 137,
+      "head_sha": "a9d7c9b1c0ac97175b260d327bc42a6ef4a5c67b"
+    },
+    {
+      "pr": 144,
+      "head_sha": "034b5f320242fb184fa60c224a9baf7d080f4a51",
+      "reconciled_commit": "3d6db9ec68e051c2a0ae3d401f5ef72812e01900"
+    },
+    {
+      "pr": 124,
+      "head_sha": "6cbb4691a177f31fd18ffff4541b4cc0131f4904",
+      "reconciled_commit": "d7673be40bb48490ca8354f5a485426947af411f"
+    },
+    {
+      "pr": 128,
+      "head_sha": "1dac5a4822e9116fd5bbfa67d83d5b7d35401068",
+      "reconciled_commit": "d7673be40bb48490ca8354f5a485426947af411f"
+    },
+    {
+      "component": "scripted_operator_acceptance",
+      "reconciled_commit": "bb4d47e7a44e3d31479c9ceb438fafb8222dae83"
+    },
+    {
+      "component": "integrated_control_plane_case_counts",
+      "reconciled_commit": "fb91b1b11b3a398be0513ac201e931b3d44a1725"
+    },
+    {
+      "component": "native_provider_and_windows_repairs",
+      "reconciled_commit": "11c4d788fbf868ff4572589b2760922343eb5897"
+    },
+    {
+      "component": "local_system_runtime_publication_contract",
+      "reconciled_commit": "e58ae08bf43bc96c408b2795ac7dab47b075218e"
+    },
+    {
+      "component": "native_workflow_reconciliation",
+      "reconciled_commit": "ebf9a1a6fd9f5792a39d453856eb1a66ead67e12"
+    },
+    {
+      "component": "clocksync_and_retained_provider_workflows",
+      "reconciled_commit": "3060d4a9f77f12b9b3604585219f6ef419eeec8a"
+    },
+    {
+      "component": "published_baseline_and_diagnostic_reports",
+      "reconciled_commit": "26b3c9e09a5f4f7e69a5f15080e8ca466cd7e05b"
+    },
+    {
+      "component": "single_wheel_operator_acceptance_and_harness_regressions",
+      "transfer_tree": "429782640d22a63fe87e24f13caf970d12ac6bba"
+    },
+    {
+      "component": "reviewed_single_wheel_acceptance",
+      "reconciled_commit": "9d157bbbcfe589d9e24c0c9f9fd907eba8271792"
+    }
+  ],
+  "software_scope": [
+    "module maintenance and provider history",
+    "trusted operation/preservation/source contracts",
+    "typed scientific composition and genuine OCI qualification",
+    "Legibility review and comparison",
+    "three automated installed correction/replay journeys",
+    "one portable candidate wheel consumed on Linux and Windows with exact installed byte closure"
+  ],
+  "candidate_ref": "release/net-research-candidate",
+  "candidate_identity": "Resolve the full immutable SHA from the release branch and pass it to the collector; a source file cannot contain the SHA of its own enclosing commit.",
+  "retained_native_side_histories": [
+    {
+      "role": "set",
+      "commit": "2f838f4e196f453efc3a59045b0b3ec4b5680296"
+    },
+    {
+      "role": "csg",
+      "commit": "0b00e837c2df3206a3d38b497799f85b72de80f7"
+    },
+    {
+      "role": "scr",
+      "commit": "91a6d3b37f28623332acd485e9f8a12953acf71e"
+    },
+    {
+      "role": "tbrt",
+      "commit": "edb4e5b99ec0ce384437e1c0f1c820ef04598e33"
+    }
+  ]
+}

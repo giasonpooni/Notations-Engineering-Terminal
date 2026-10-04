@@ -19,6 +19,9 @@ jobs:
       JULIA_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Initialize runner-local runtime paths
         run: |
           echo "CARGO_TARGET_DIR=$RUNNER_TEMP/scr-native-target" >> "$GITHUB_ENV"
@@ -35,17 +38,30 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'],'a') as out:
               print('revision='+pin['scr_revisions'][-1],file=out)
           PY
-      - name: Require operator-provisioned access to the private owner repository
+      - name: Check out the exact retained SCR source
+        id: retained-provider
+        shell: python
         env:
-          SCR_READ_TOKEN: ${{ secrets.SCR_READ_TOKEN }}
-        run: test -n "$SCR_READ_TOKEN"
-      - uses: actions/checkout@v4
-        with:
-          repository: atomtrapping/Notations-Compute-Runtime
-          ref: ${{ steps.pin.outputs.revision }}
-          path: .ciw-scr-provider
-          token: ${{ secrets.SCR_READ_TOKEN }}
-          persist-credentials: false
+          RETAINED_PROVIDER_REVISION: ${{ steps.pin.outputs.revision }}
+        run: |
+          import os, re, sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          sys.path.insert(0, str(root))
+          from scripts.monorepo import _retained, git, load_manifest, verify_imports, worktree_mutation_lock
+          from scripts.provider_checkouts import validate_checkout
+          pin = os.environ['RETAINED_PROVIDER_REVISION']
+          if re.fullmatch(r'[0-9a-f]{40}', pin) is None:
+              raise ValueError('A full reviewed provider revision is required')
+          target = root / '.ciw-scr-provider'
+          verify_imports(root)
+          module = next(item for item in load_manifest(root)['modules'] if item['role'] == 'scr')
+          _retained(root, pin, module)
+          with worktree_mutation_lock(root):
+              git(root, 'worktree', 'add', '--detach', str(target), pin)
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              print('prepared=true', file=output)
+          validate_checkout(target, pin)
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.10.12'
@@ -96,6 +112,24 @@ jobs:
           report=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'native-results/report.json')))
           assert report['full_completion'], 'Full interoperability remains incomplete; inspect separate gate outcomes'
           PY
+      - name: Verify retained SCR source and remove its temporary worktree
+        if: always() && steps.retained-provider.outputs.prepared == 'true'
+        shell: python
+        env:
+          RETAINED_PROVIDER_REVISION: ${{ steps.pin.outputs.revision }}
+        run: |
+          import os, sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          sys.path.insert(0, str(root))
+          from scripts.monorepo import git, worktree_mutation_lock
+          from scripts.provider_checkouts import validate_checkout
+          target = root / '.ciw-scr-provider'
+          try:
+              validate_checkout(target, os.environ['RETAINED_PROVIDER_REVISION'])
+          finally:
+              with worktree_mutation_lock(root):
+                  git(root, 'worktree', 'remove', '--force', str(target))
       - uses: actions/upload-artifact@v4
         if: always()
         with:

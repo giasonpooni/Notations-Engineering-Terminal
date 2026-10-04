@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "repository": "atomtrapping/Notations-Systems-Terminal",
+  "scope": "Integrated public research baseline: independent packages, installed operator journeys, typed composition including real OCI, and Legibility. CI metadata and artifact presence do not establish independent-human or physical qualification.",
+  "required_workflows": [
+    {
+      "path": ".github/workflows/monorepo.yml",
+      "jobs": [
+        "source-history-and-migration-guards (ubuntu-latest)",
+        "source-history-and-migration-guards (windows-latest)",
+        "independent-wheels-and-composition (3.11)",
+        "independent-wheels-and-composition (3.12)",
+        "inference-and-public-process-replay (3.12)",
+        "inference-and-public-process-replay (3.13)",
+        "mathematics-and-measurement-chain (3.12)",
+        "mathematics-and-measurement-chain (3.13)",
+        "flowstate-wheel-and-original-default-suite (3.12)",
+        "flowstate-wheel-and-original-default-suite (3.13)",
+        "surface-science-lock-and-replay (3.12)",
+        "surface-science-lock-and-replay (3.13)",
+        "operations-resources-and-bounded-cpu (3.12)",
+        "operations-resources-and-bounded-cpu (3.13)",
+        "independent-locked-web-packages"
+      ],
+      "artifacts": [
+        "monorepo-source-audit-ubuntu-latest",
+        "monorepo-source-audit-windows-latest",
+        "monorepo-qualification-python-3.11",
+        "monorepo-qualification-python-3.12",
+        "monorepo-inference-python-3.12",
+        "monorepo-inference-python-3.13",
+        "monorepo-math-python-3.12",
+        "monorepo-math-python-3.13",
+        "monorepo-flowstate-python-3.12",
+        "monorepo-flowstate-python-3.13",
+        "monorepo-surface-python-3.12",
+        "monorepo-surface-python-3.13",
+        "monorepo-operations-python-3.12-rust-1.90.0",
+        "monorepo-operations-python-3.13-rust-1.90.0",
+        "monorepo-web-node-24"
+      ],
+      "allowed_skipped_jobs": [
+        "flowstate-public-slow-reproduction"
+      ],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/test.yml",
+      "jobs": [
+        "python (ubuntu-latest, 3.11)",
+        "python (ubuntu-latest, 3.12)",
+        "python (windows-latest, 3.11)",
+        "python (windows-latest, 3.12)",
+        "installed-package",
+        "container-deployment",
+        "native-windows-deployment",
+        "godot-bridge"
+      ],
+      "artifacts": [
+        "ciw-python-wheel"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {
+        "plsr-terminal (ubuntu-latest)": "Private PLSR provider is outside the initial public baseline; no qualification claimed.",
+        "plsr-terminal (windows-latest)": "Private PLSR provider is outside the initial public baseline; no qualification claimed."
+      }
+    },
+    {
+      "path": ".github/workflows/workflow-contracts.yml",
+      "jobs": [
+        "actionlint"
+      ],
+      "artifacts": [],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/declared-workloads.yml",
+      "jobs": [
+        "declared-workloads"
+      ],
+      "artifacts": [
+        "declared-workload-native-replay"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/calibrated-observable.yml",
+      "jobs": [
+        "process-experiment (3.12)",
+        "process-experiment (3.13)"
+      ],
+      "artifacts": [],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/identified-design.yml",
+      "jobs": [
+        "identified-design"
+      ],
+      "artifacts": [],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/calibrated-window.yml",
+      "jobs": [
+        "calibrated-window (3.11)",
+        "calibrated-window (3.12)"
+      ],
+      "artifacts": [
+        "calibrated-window-3.11",
+        "calibrated-window-3.12"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/proved-heat.yml",
+      "jobs": [
+        "native-proof"
+      ],
+      "artifacts": [
+        "proved-heat-native-evidence"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/system-composition.yml",
+      "jobs": [
+        "reference-and-wheel (ubuntu-latest, 3.11)",
+        "reference-and-wheel (ubuntu-latest, 3.12)",
+        "reference-and-wheel (windows-latest, 3.11)",
+        "reference-and-wheel (windows-latest, 3.12)",
+        "oci-reference"
+      ],
+      "artifacts": [
+        "scientific-system-oci-qualification",
+        "system-reference-ubuntu-latest-3.11",
+        "system-reference-ubuntu-latest-3.12",
+        "system-reference-windows-latest-3.11",
+        "system-reference-windows-latest-3.12"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/legibility.yml",
+      "jobs": [
+        "boundary-and-installed-wheel (ubuntu-latest, 3.11)",
+        "boundary-and-installed-wheel (ubuntu-latest, 3.12)",
+        "boundary-and-installed-wheel (windows-latest, 3.11)",
+        "boundary-and-installed-wheel (windows-latest, 3.12)"
+      ],
+      "artifacts": [
+        "legibility-operator-ubuntu-latest-3.11",
+        "legibility-operator-ubuntu-latest-3.12",
+        "legibility-operator-windows-latest-3.11",
+        "legibility-operator-windows-latest-3.12"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/release-operator.yml",
+      "jobs": [
+        "installed-journeys (ubuntu-latest)",
+        "installed-journeys (windows-latest)"
+      ],
+      "artifacts": [
+        "release-operator-ubuntu-latest",
+        "release-operator-windows-latest"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    },
+    {
+      "path": ".github/workflows/operator-readiness.yml",
+      "jobs": [
+        "candidate-wheel",
+        "installed-journey (ubuntu-24.04)",
+        "installed-journey (windows-latest)",
+        "operator-acceptance"
+      ],
+      "artifacts": [
+        "operator-candidate-wheel",
+        "operator-artifact-tests",
+        "operator-readiness-ubuntu-24.04",
+        "operator-readiness-windows-latest"
+      ],
+      "allowed_skipped_jobs": [],
+      "excluded_jobs": {}
+    }
+  ],
+  "audited_workflow_commits": [
+    "ffad7dba2b258339b27170e071c0de431f6f2aef",
+    "231a058f3bef00fd9b11db348979b889d5c81e90",
+    "a9d7c9b1c0ac97175b260d327bc42a6ef4a5c67b",
+    "d7673be40bb48490ca8354f5a485426947af411f",
+    "3d6db9ec68e051c2a0ae3d401f5ef72812e01900",
+    "ebf9a1a6fd9f5792a39d453856eb1a66ead67e12",
+    "3060d4a9f77f12b9b3604585219f6ef419eeec8a",
+    "26b3c9e09a5f4f7e69a5f15080e8ca466cd7e05b",
+    "9d157bbbcfe589d9e24c0c9f9fd907eba8271792"
+  ]
+}

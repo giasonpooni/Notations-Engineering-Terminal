@@ -11,10 +11,20 @@ from ..core.records import finite_tree
 from .registry import valid_operation_id
 
 _VALIDATORS: dict[str, Callable] = {}
+_VALIDATOR_ROLES: dict[str, str] = {}
+_ROLES = frozenset({"analysis", "state_estimator", "calibration", "verification", "decision", "backend"})
 
 
 def dependency_result_ids(operation_id: str, parameters: dict) -> list[str]:
     """Fixed trusted dependency contracts; saved parameters never load code."""
+    system_fields = {
+        "system.simulate.v1": ("plan",), "system.study.v1": ("plan",),
+        "system.verify.v1": ("candidate",), "system.compare.v1": ("left", "right"),
+    }.get(operation_id)
+    if system_fields is not None:
+        return [parameters[field]["result_id"] for field in system_fields
+                if isinstance(parameters.get(field), dict)
+                and isinstance(parameters[field].get("result_id"), str)]
     if operation_id == "irrigation.verify.v1":
         candidate = parameters.get("candidate")
         identity = candidate.get("result_id") if type(candidate) is dict else None
@@ -38,8 +48,7 @@ def validate_request_dependencies(operation_id: str, parameters: dict, retained:
         validate_live_dependency(parameters, retained)
 
 
-def validate_role(operation_id: str, role: str) -> None:
-    expected = {"statistics.v1": "analysis", "spectrum.periodogram.v1": "analysis",
+_BUILTIN_ROLES = {"statistics.v1": "analysis", "spectrum.periodogram.v1": "analysis",
                 "fsrt.tank-reconstruct.v1": "state_estimator",
                 "fsrt.tank-reconstruct.v2": "state_estimator",
                 "ciw.simulated-fsrt.v1": "state_estimator",
@@ -61,29 +70,44 @@ def validate_role(operation_id: str, role: str) -> None:
                 "fluid.reservoir.verify.v1": "verification",
                 "fluid.wave.simulate.v1": "backend",
                 "fluid.wave.verify.v1": "verification",
-                "irrigation.plan.v1": "backend",
-                "irrigation.verify.v1": "verification",
                 "polymer.assess-cycle.v1": "backend",
                 "polymer.copilot-context.v1": "backend",
                 "polymer.control-simulate.v1": "backend",
                 "polymer.verify-cycle.v1": "verification",
+                "irrigation.plan.v1": "backend",
+                "irrigation.verify.v1": "verification",
                 "leakage.assess-balance.v1": "backend",
-                "leakage.verify-balance.v1": "verification"}.get(operation_id)
-    if expected is not None and role != expected:
+                "leakage.verify-balance.v1": "verification",
+                "system.compile.v1": "backend",
+                "system.simulate.v1": "backend",
+                "system.compare.v1": "backend",
+                "system.study.v1": "backend",
+                "system.verify.v1": "verification"}
+
+
+def validate_role(operation_id: str, role: str) -> None:
+    expected = _BUILTIN_ROLES.get(operation_id, _VALIDATOR_ROLES.get(operation_id))
+    if expected is None:
+        raise ValueError(f"No trusted saved-payload schema and role for {operation_id}")
+    if role != expected:
         raise ValueError("Operation role contradicts the declared payload contract")
 
 
-def register_payload_validator(operation_id: str, validator: Callable) -> None:
+def register_payload_validator(operation_id: str, validator: Callable, *, role: str = "backend") -> None:
+    """Bind an offline schema and its role together in trusted process setup.
+
+    Existing extension providers default to their historical backend role.
+    Analysis, estimation, calibration, verification, and decision extensions must
+    declare their role explicitly; retained files cannot choose or change it.
+    """
     if not valid_operation_id(operation_id) or not callable(validator):
         raise ValueError("A payload schema requires a versioned operation and callable validator")
-    if operation_id in _VALIDATORS or operation_id in {
-        "statistics.v1", "spectrum.periodogram.v1", "fsrt.tank-reconstruct.v1",
-        "fsrt.tank-reconstruct.v2", "jspt.covariance-propagate.v1", "gte.project-circle.v1", "legibility.compile.v1",
-        "legibility.fixture-summary.v1", "gsc.local-frame.v1",
-        "oscillator.rhs-native.v1", "ciw.simulated-fsrt.v1"
-    }:
+    if not isinstance(role, str) or role not in _ROLES:
+        raise ValueError("A payload schema requires an explicit supported role")
+    if operation_id in _VALIDATORS or operation_id in _BUILTIN_ROLES:
         raise ValueError("Payload schema already registered")
     _VALIDATORS[operation_id] = validator
+    _VALIDATOR_ROLES[operation_id] = role
 
 
 def validate_payload(operation_id: str, data: dict, run: dict, parameters: dict, selection: dict) -> None:
@@ -126,6 +150,9 @@ def validate_payload(operation_id: str, data: dict, run: dict, parameters: dict,
         from ..polymer_workflow import validate_payload as validator
     elif operation_id in {"leakage.assess-balance.v1", "leakage.verify-balance.v1"}:
         from ..leakage_workflow import validate_payload as validator
+    elif operation_id in {"system.compile.v1", "system.simulate.v1", "system.verify.v1",
+                          "system.compare.v1", "system.study.v1"}:
+        from ..system_workflow import validate_payload as validator
     else:
         validator = _VALIDATORS.get(operation_id)
         if validator is None:

@@ -22,7 +22,7 @@ replay creates a new execution.
 | Area | Implemented surfaces and guides |
 | --- | --- |
 | Investigation and execution | Sessions, operation and capability registries, retained runs, save/reopen, explicit replay and runtime preflight. [Instrument catalogue](docs/INSTRUMENTS.md). |
-| Typed composition and design | Workflow composition, parameterized Boards and declared input/output contracts. [Workflow algebra](docs/WORKFLOW_ALGEBRA.md) · [Scientific workflows](docs/NET_SCIENTIFIC_WORKFLOWS.md). |
+| Typed composition and design | Workflow composition, parameterized Boards, declared input/output contracts and coupled thermomechanical reference configurations. [Workflow algebra](docs/WORKFLOW_ALGEBRA.md) · [Scientific workflows](docs/NET_SCIENTIFIC_WORKFLOWS.md) · [System composition](docs/SYSTEM_COMPOSITION.md). |
 | Evolving workflow structure | Bounded typed hypergraph rewriting, invariant checks, retained transformation dependencies, alternative paths and explicit schedule comparisons. [Hypergraph rewriting](docs/HYPERGRAPH_REWRITE.md). |
 | Measurement and estimation | Calibration, time reconciliation, telemetry, covariance propagation, state estimation and bounded observation-design workflows. [Integration coverage](docs/INTEGRATION_COVERAGE.md). |
 | Scientific models and testbeds | Bounded impact and atmospheric models, thermal observers, geometric calculations and domain-specific numerical checks. [Atmospheric engine](docs/ATMOSPHERIC_ENGINE.md). |

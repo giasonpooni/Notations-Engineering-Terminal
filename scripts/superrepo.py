@@ -13,7 +13,7 @@ import tempfile
 import uuid
 
 from monorepo import ROOT, git, load_manifest, verify_imports, verify_terminal_source
-from check_monorepo import _environment
+from superrepo_doctor import configured_environment
 
 GATES = {
     "measurement": "check_monorepo.py",
@@ -48,7 +48,7 @@ def check(args):
         run_output = output / report["verification_id"].split(":", 1)[1]
         run_output.mkdir(exist_ok=False)
         verification_ids = {report["verification_id"]}
-        environment = _environment()
+        environment = configured_environment(cargo=args.cargo, node_bin=args.node_bin)
         if args.temp_root is not None:
             temp_root = args.temp_root.expanduser().resolve()
             if not temp_root.is_dir():
@@ -63,7 +63,6 @@ def check(args):
             node_bin = args.node_bin.expanduser().resolve()
             if not node_bin.is_dir():
                 raise ValueError("--node-bin must be an existing trusted toolchain directory")
-            environment["PATH"] = str(node_bin) + os.pathsep + environment.get("PATH", "")
         for group in groups:
             # Each invocation has fresh evidence paths; a previous passed
             # report cannot stand in for a child that failed to write one.
@@ -71,7 +70,9 @@ def check(args):
             command = [sys.executable, str(ROOT / "scripts" / GATES[group]),
                        "--output-dir", str(group_output)]
             if group == "operations" and args.cargo:
-                command += ["--cargo", str(args.cargo.expanduser().resolve())]
+                command += ["--cargo", str(args.cargo.expanduser().absolute())]
+            if group == "surface" and getattr(args, "uv", None):
+                command += ["--uv", str(args.uv.expanduser().resolve())]
             if group == "flowstate" and args.full_reproduction:
                 command += ["--full-reproduction"]
             print("Qualifying " + group, flush=True)
@@ -129,16 +130,44 @@ def main(argv=None):
     inventory = subcommands.add_parser("list", help="List original package identities and execution pins")
     inventory.add_argument("--json", action="store_true")
     subcommands.add_parser("audit", help="Verify original histories, source bytes, licenses and execution bindings")
+    preflight = subcommands.add_parser("doctor", help="Inspect source and toolchain prerequisites without running qualification")
+    preflight.add_argument("--group", choices=list(GATES), action="append")
+    preflight.add_argument("--cargo", type=Path, help="Trusted Cargo executable; its directory supplies compiler and Rustdoc")
+    preflight.add_argument("--node-bin", type=Path, help="Trusted directory containing Node 24 or newer and npm")
+    preflight.add_argument("--uv", type=Path, help="Trusted uv executable for Surface's locked lane")
+    preflight.add_argument("--json", action="store_true")
+    preparation = subcommands.add_parser("module-prepare", help="Prepare a source-audited candidate from a clean committed one-module draft")
+    preparation.add_argument("--role", required=True)
+    preparation.add_argument("--base", required=True, help="Full baseline commit identity from before editing the module")
+    preparation.add_argument("--branch", required=True, help="Absent review branch to create when the plan is applied")
+    preparation.add_argument("--output-plan", type=Path, required=True)
+    publication = subcommands.add_parser("module-apply", help="Revalidate a prepared candidate and create its new review branch")
+    publication.add_argument("--plan", type=Path, required=True)
     qualification = subcommands.add_parser("check", help="Run isolated original-package and composed-workflow gates")
     qualification.add_argument("--group", choices=list(GATES), action="append", help="Select lanes; repeat to combine. Default: all")
     qualification.add_argument("--output-dir", type=Path, default=ROOT / "results/superrepo")
     qualification.add_argument("--temp-root", type=Path, help="Existing directory for child gates' temporary files and worktrees")
     qualification.add_argument("--cargo", type=Path, help="Trusted Cargo executable for the operations lane")
     qualification.add_argument("--node-bin", type=Path, help="Trusted directory containing Node 24 and npm")
+    qualification.add_argument("--uv", type=Path, help="Trusted uv executable for Surface's locked lane")
     qualification.add_argument("--full-reproduction", action="store_true", help="Include original slow FlowState reproductions")
     args = parser.parse_args(argv)
     if args.command == "check":
         return check(args)
+    if args.command == "doctor":
+        from superrepo_doctor import doctor
+        return doctor(args)
+    if args.command in {"module-prepare", "module-apply"}:
+        from module_update import apply, prepare
+        try:
+            result = (prepare(ROOT, args.role, args.base, args.branch, args.output_plan)
+                      if args.command == "module-prepare" else apply(ROOT, args.plan))
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+            print(json.dumps({"status": "refused", "error": {"type": type(error).__name__, "message": str(error)}}, indent=2))
+            return 1
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0 if (args.command == "module-prepare" or
+                     result["status"] == "published" and "publication_error" not in result) else 1
     if args.command == "audit":
         print(json.dumps({"schema": "notations.monorepo-audit.v1", "imports": verify_imports(ROOT)}, indent=2))
         return 0

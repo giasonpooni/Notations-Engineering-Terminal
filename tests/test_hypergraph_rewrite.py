@@ -26,6 +26,10 @@ def test_thermal_refinement_preserves_capacity_and_declares_interface():
     before = deepcopy(source)
     history = h.run(source)
     assert source == before
+    assert set(history["runtime"]["source_files"]) == {
+        "hypergraph_rewrite.py", "control_contracts.py",
+        "core/identities.py", "operations/runner.py",
+    }
     assert history["status"] == "COMPLETE"
     assert len(history["events"]) == 1
     graph = history["states"][-1]["graph"]

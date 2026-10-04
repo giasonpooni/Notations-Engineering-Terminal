@@ -38,7 +38,7 @@ jobs:
           python -m pytest tests/test_control_plane.py tests/test_scientific.py tests/test_scientific_observations.py tests/test_check_suite.py tests/test_math_inspector.py tests/test_information_display.py -q --junitxml=native-owner-regressions.xml
           python - <<'PY'
           import xml.etree.ElementTree as E
-          for path,count in [('native-owner-contracts.xml',161),('native-owner-regressions.xml',338)]:
+          for path,count in [('native-owner-contracts.xml',161),('native-owner-regressions.xml',357)]:
               suites=list(E.parse(path).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites)==count
               assert all(int(s.attrib[k])==0 for s in suites for k in ('failures','errors','skipped'))

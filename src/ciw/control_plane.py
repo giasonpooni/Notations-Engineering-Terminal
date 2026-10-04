@@ -192,13 +192,50 @@ class ObservationBus:
 
 def observations_from_run(run: dict, *, channel: str, entity_id: str, clock_id: str,
                           model_id: str, semantics: str, execution_id: str | None = None) -> list[dict]:
-    """Explicit projection only. Never infer clocks, entity matching or physical provenance."""
+    """Explicit projection only; a caller cannot promote a source to acquired data.
+
+    Observed projections require a retained observed-origin declaration. This
+    checks source semantics, not acquisition authenticity or physical validity.
+    """
     from .instruments import validate_run
     from .core.identities import validate_evidence_identity
     validate_run(run)
     validate_evidence_identity(run)
     if channel not in run["channels"]:
         raise ValueError("Unknown recording channel")
+    if semantics == "observed":
+        from .adapters.registry import default_registry
+        provenance = run["metadata"]["provenance"]
+        role = default_registry().resolve(run).manifest.role
+        # The legacy analytic adapter predates structured origin metadata; its
+        # fixed identity already establishes that it is not sensor acquisition.
+        nonobserved = ("analytic", "synthetic", "simulated", "estimated", "reference", "computed")
+        retained_channel = run["channels"][channel]
+        # These scalar markers carry semantic meaning. Descriptive source
+        # metadata may remain structured JSON; never infer nested declarations.
+        for owner, names in ((provenance, ("semantics", "kind", "origin", "source_class")),
+                             (retained_channel, ("semantics", "kind"))):
+            for name in names:
+                if name in owner and (not isinstance(owner[name], str) or not owner[name].strip()):
+                    raise ValueError(f"Observed projection marker {name} must be a nonempty string")
+        for name in ("observed", "synthetic"):
+            if name in provenance and type(provenance[name]) is not bool:
+                raise ValueError(f"Observed projection marker {name} must be a boolean")
+        source = provenance.get("source")
+        nonobserved_channel_kinds = nonobserved + (
+            "estimated_state", "simulated_observation", "declared_initial_condition")
+        if (run["instrument"] == "analytic-damped-oscillator.v1"
+                or role not in {"instrument", "record_only", "measurement_adapter"}
+                or provenance.get("semantics") != "observed"
+                or provenance.get("observed") is False
+                or provenance.get("synthetic") is True
+                or provenance.get("kind") in nonobserved
+                or (isinstance(source, str) and source in nonobserved)
+                or provenance.get("origin") in nonobserved + ("computed_model_output",)
+                or provenance.get("source_class") in nonobserved + ("synthetic_fixture", "simulated_observation")
+                or retained_channel.get("kind") in nonobserved_channel_kinds
+                or retained_channel.get("semantics", "observed") != "observed"):
+            raise ValueError("Observed projection requires retained observed source semantics; computed or unknown origins cannot be promoted")
     if len(run["time_s"]) > MAX_SAMPLES:
         raise ValueError("Recording exceeds observation budget")
     return [observation(identity={"model_id": model_id, "entity_id": entity_id,

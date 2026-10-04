@@ -319,7 +319,7 @@ def runtime_identity():
     root = Path(__file__).parent
     files = (Path(__file__), root / "control_contracts.py", root / "core" / "identities.py", root / "operations" / "runner.py")
     return {"provider": "ciw.hypergraph_rewrite", "version": "1", "python": platform.python_version(),
-            "source_files": {str(path.relative_to(root)): bytes_ref(path.read_bytes()) for path in files}}
+            "source_files": {path.relative_to(root).as_posix(): bytes_ref(path.read_bytes()) for path in files}}
 
 
 def _branch(root, path):

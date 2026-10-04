@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import os,json,pathlib,xml.etree.ElementTree as ET
-          for file,count in [('godot-host-source.xml',227),('godot-host-installed.xml',127)]:
+          for file,count in [('godot-host-source.xml',246),('godot-host-installed.xml',127)]:
               suites=list(ET.parse(file).getroot().iter('testsuite'))
               assert sum(int(s.attrib['tests']) for s in suites)==count
               assert all(int(s.attrib[k])==0 for s in suites for k in ('failures','errors','skipped'))
