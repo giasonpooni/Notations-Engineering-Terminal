@@ -3,12 +3,15 @@ from copy import deepcopy
 from fractions import Fraction
 import builtins
 import math
+from pathlib import Path
 
 import numpy as np
 import pytest
 
 from ciw import leakage_contract as contract
+from ciw import leakage_native as native
 from ciw import leakage_verification as audit
+from ciw import leakage_workflow as workflow
 from ciw.operations.runner import digest, seal
 
 
@@ -67,6 +70,46 @@ def _calculation(request):
 
 def _checks(report):
     return {row["name"]: row["passed"] for row in report["checks"]}
+
+
+@pytest.mark.parametrize("root,executable", [
+    ("/retained/unavailable-flowstate", "/retained/unavailable-python"),
+    (r"C:\retained\unavailable-flowstate", r"C:\retained\python.exe"),
+    (r"\\archive\retained\flowstate", r"\\archive\retained\python.exe"),
+])
+def test_retained_runtime_paths_from_either_platform_are_metadata_only(monkeypatch, root, executable):
+    request = _request()
+    calculation = _calculation(request)
+    calculation["runtime"].update(repository_root=root, python_executable=executable)
+    original = deepcopy(calculation)
+    retained_runtime = {"provider": "ciw.leakage.assessment", "version": "1", "code_sha256": "c" * 64,
+                        "source_normalization": "utf8_lf",
+                        "scope": "offline_declared_boundary_balance_no_cause_or_actuation",
+                        "environment": {"python": "3.12.10", "floating_point": "binary64"},
+                        "native": calculation["runtime"]}
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Retained runtime metadata consulted a filesystem path")
+
+    with monkeypatch.context() as offline:
+        for method in ("resolve", "exists", "is_dir", "is_file"):
+            offline.setattr(Path, method, forbidden)
+        native.check_runtime(calculation["runtime"])
+        workflow.validate_runtime(workflow.ASSESS, retained_runtime)
+        audit.validate_calculation(request, calculation)
+        assert audit.verify(request, calculation)["status"] == "PASS"
+    assert calculation == original
+
+
+@pytest.mark.parametrize("field", ["repository_root", "python_executable"])
+@pytest.mark.parametrize("path", ["relative/path", r"C:drive-relative", r"\rooted-without-drive"])
+def test_retained_runtime_paths_still_require_an_absolute_location(field, path):
+    runtime = _runtime()
+    runtime[field] = path
+    with pytest.raises(ValueError, match="paths must be absolute"):
+        native.check_runtime(runtime)
+    with pytest.raises(ValueError, match="paths must be absolute"):
+        audit._runtime(runtime)
 
 
 @pytest.mark.parametrize("basis", ["volume", "mass"])
@@ -170,8 +213,11 @@ def test_lawful_severe_residual_cancellation_passes_source_scaled_envelope():
     calculation = _calculation(request)
     for label in ("interval", "cumulative"):
         calculation[label]["residual"] = [0.0]
-    assert sum(coefficient * Fraction.from_float(float(value)) for coefficient, value in
-               zip(calculation["interval"]["operator"][0], calculation["raw"]["values"])) == -Fraction(1, 2 ** 40)
+    assert sum(
+        Fraction.from_float(float(coefficient)) * Fraction.from_float(float(value))
+        for coefficient, value in zip(
+            calculation["interval"]["operator"][0], calculation["raw"]["values"])
+    ) == -Fraction(1, 2 ** 40)
     assert audit.verify(request, calculation)["status"] == "PASS"
     calculation["interval"]["residual"][0] = 1.0
     assert not _checks(audit.verify(request, calculation))["interval_residuals"]

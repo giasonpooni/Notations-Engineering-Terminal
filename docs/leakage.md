@@ -101,6 +101,8 @@ the residual is approximately −0.05 per interval and −0.20 over the window,
 in the selected m³ or kg unit.
 
 `inspect` and `export` validate and read retained evidence without running FSRT.
+Retained runtime paths may be absolute POSIX or Windows paths from the original
+host; reading them does not resolve or execute those paths on the current host.
 `verify` creates a new, independent finite numerical audit without rerunning the
 native provider or changing the saved result. `--output` saves that receipt to
 a new file. `replay` retains the same request and evidence while creating a new
