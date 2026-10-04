@@ -1,0 +1,185 @@
+name: NET guarded system full rerun
+on:
+  push:
+    branches: [codex/ci-queue-recovery-20261004]
+    paths: [.github/workflows/net-system-full-retry.yml]
+permissions: {}
+concurrency:
+  group: net-system-full-retry-37162586523
+  cancel-in-progress: false
+jobs:
+  retry:
+    runs-on: ubuntu-slim
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - id: retry
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          retries: 0
+          script: |
+            const fs = require('node:fs/promises');
+            const path = require('node:path');
+            const owner = 'atomtrapping';
+            const repo = 'Notations-Systems-Terminal';
+            const repository = owner + '/' + repo;
+            const target = 37162586523;
+            const sha = 'c9b4aa9fbd12583d6e1dc995f1044c7adc46e7ff';
+            const branch = 'release/net-research-candidate';
+            const workflow = '.github/workflows/system-composition.yml';
+            const callerRef = 'refs/heads/codex/ci-queue-recovery-20261004';
+            const expectedJobs = [
+              [111318921251, 'oci-reference', 'success'],
+              [111318921339, 'reference-and-wheel (ubuntu-latest, 3.12)', 'success'],
+              [111318921376, 'reference-and-wheel (windows-latest, 3.11)', 'failure'],
+              [111318921390, 'reference-and-wheel (windows-latest, 3.12)', 'success'],
+              [111318921406, 'reference-and-wheel (ubuntu-latest, 3.11)', 'success']
+            ];
+            const report = {
+              schema: 'net-system-full-rerun.v1',
+              repository, target_run_id: target, target_sha: sha,
+              target_branch: branch, target_workflow: workflow,
+              intended_attempt: 2, post_count: 0,
+              outcome: 'not-submitted', started_at: new Date().toISOString()
+            };
+            let reportPath;
+            let failed = false;
+            function guard(ok, code) {
+              if (!ok) {
+                const error = new Error(code);
+                error.guardCode = code;
+                throw error;
+              }
+            }
+            function httpStatus(error) {
+              return Number.isInteger(error?.status) ? error.status : null;
+            }
+            function params(extra = {}) {
+              return {
+                owner, repo, run_id: target,
+                headers: {accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'},
+                request: {retries: 0, timeout: 10000},
+                ...extra
+              };
+            }
+            async function save() {
+              guard(Boolean(reportPath), 'report-path-unavailable');
+              report.updated_at = new Date().toISOString();
+              const temporary = reportPath + '.tmp';
+              await fs.writeFile(temporary, JSON.stringify(report, null, 2) + '\n',
+                                 {encoding: 'utf8', mode: 0o600, flag: 'wx'});
+              await fs.rename(temporary, reportPath);
+              core.setOutput('report', reportPath);
+            }
+            async function readRun() {
+              const response = await github.request('GET /repos/{owner}/{repo}/actions/runs/{run_id}', params());
+              const run = response.data;
+              guard(response.status === 200 && run?.id === target, 'target-run-id-mismatch');
+              guard(run.repository?.full_name === repository && run.head_repository?.full_name === repository,
+                    'target-repository-mismatch');
+              guard(run.head_sha === sha && run.head_branch === branch && run.event === 'push' && run.path === workflow,
+                    'target-identity-mismatch');
+              guard(run.run_attempt === 1 || run.run_attempt === 2, 'unexpected-target-attempt');
+              const states = ['queued', 'requested', 'waiting', 'pending', 'in_progress', 'completed'];
+              const conclusions = ['success', 'failure', 'cancelled', 'timed_out', 'action_required', 'neutral', 'skipped', 'stale'];
+              report.last_observed = {
+                attempt: run.run_attempt,
+                status: states.includes(run.status) ? run.status : 'unknown',
+                conclusion: run.conclusion === null ? null : conclusions.includes(run.conclusion) ? run.conclusion : 'unknown'
+              };
+              return run;
+            }
+            function requireOriginalFailure(run) {
+              guard(run.run_attempt === 1 && run.status === 'completed' && run.conclusion === 'failure',
+                    'original-run-not-terminal-failure');
+            }
+            try {
+              guard(typeof process.env.RUNNER_TEMP === 'string' && path.isAbsolute(process.env.RUNNER_TEMP),
+                    'invalid-runner-temp');
+              reportPath = path.join(process.env.RUNNER_TEMP, 'system-full-rerun-37162586523.json');
+              guard(context.repo.owner === owner && context.repo.repo === repo &&
+                    process.env.GITHUB_REPOSITORY === repository, 'caller-repository-mismatch');
+              guard(context.eventName === 'push' && context.ref === callerRef &&
+                    process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === callerRef,
+                    'caller-event-or-ref-mismatch');
+              guard(process.env.GITHUB_RUN_ATTEMPT === '1', 'caller-attempt-not-one');
+              guard(Number.isSafeInteger(context.runId) && context.runId > 0 && context.runId !== target, 'invalid-caller-run');
+              report.caller_run_id = context.runId;
+              let run = await readRun();
+              if (run.run_attempt === 2) {
+                report.outcome = 'skipped-already-attempt-two';
+              } else {
+                requireOriginalFailure(run);
+                const response = await github.request(
+                  'GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs',
+                  params({attempt_number: 1, per_page: 100, page: 1}));
+                const body = response.data;
+                guard(response.status === 200 && body?.total_count === 5 && Array.isArray(body.jobs) && body.jobs.length === 5,
+                      'original-job-count-mismatch');
+                guard(new Set(body.jobs.map(job => job.id)).size === 5 && new Set(body.jobs.map(job => job.name)).size === 5,
+                      'duplicate-original-jobs');
+                for (const [id, name, conclusion] of expectedJobs) {
+                  const job = body.jobs.find(item => item.id === id);
+                  guard(job && job.name === name && job.run_id === target && job.run_attempt === 1 &&
+                        job.head_sha === sha && job.head_branch === branch && job.status === 'completed' &&
+                        job.conclusion === conclusion, 'original-job-identity-or-result-mismatch');
+                }
+                report.original_jobs = expectedJobs.map(([id, name, conclusion]) => ({id, name, conclusion}));
+                report.outcome = 'validated-single-post-intent';
+                await save();
+                // Last remote read immediately before the sole permitted POST.
+                run = await readRun();
+                if (run.run_attempt === 2) {
+                  report.outcome = 'skipped-attempt-two-observed-before-post';
+                } else {
+                  requireOriginalFailure(run);
+                  report.post_count = 1;
+                  report.post_started_at = new Date().toISOString();
+                  try {
+                    const posted = await github.request('POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun',
+                      params({enable_debug_logging: true, request: {retries: 0, timeout: 30000}}));
+                    report.post_http_status = posted.status;
+                  } catch (error) {
+                    // An uncertain response must never cause another POST.
+                    report.post_http_status = httpStatus(error);
+                    report.post_response_uncertain = true;
+                  }
+                  report.outcome = 'single-post-issued-awaiting-readback';
+                  await save();
+                  let confirmed = false;
+                  for (let index = 0; index < 13; index += 1) {
+                    if (index) await new Promise(resolve => setTimeout(resolve, 5000));
+                    try {
+                      run = await readRun();
+                    } catch (error) {
+                      if (error.guardCode) throw error;
+                      report.last_readback_http_status = httpStatus(error);
+                      continue;
+                    }
+                    if (run.run_attempt === 2) { confirmed = true; break; }
+                  }
+                  guard(confirmed, 'attempt-two-not-confirmed-no-post-retry');
+                  report.outcome = 'attempt-two-observed-after-single-post';
+                }
+              }
+            } catch (error) {
+              failed = true;
+              report.outcome = report.post_count ? 'post-issued-requires-review' : 'blocked-before-post';
+              report.error = error.guardCode || 'api-or-filesystem-error';
+              report.error_http_status = httpStatus(error);
+            } finally {
+              try { await save(); }
+              catch { failed = true; report.report_write_failed = true; }
+              core.info(JSON.stringify(report));
+              if (failed) core.setFailed('Guarded system rerun requires review; see report.');
+            }
+      - name: Retain sanitized report
+        if: always() && steps.retry.outputs.report != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: system-full-retry-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.retry.outputs.report }}
+          if-no-files-found: error
+          retention-days: 14
